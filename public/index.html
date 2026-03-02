@@ -6,6 +6,41 @@
     <title>WebRTC</title>
 </head>
 <body>
-    <h1>Hello world</h1>
+    <!-- qr-code div -->
+    <div id="qr-code"></div>
+
+    <!-- Add socket.io client -->
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- Qr-code generator -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==" crossorigin="anonymous"></script>
+
+    <!-- QR-code logic -->
+     <script>
+        {
+            let socket;
+
+            const init = () => {
+                socket = io.connect("/")
+                socket.on("connect", () => {
+                    console.log(`connect: ${socket.id}`);
+                    //combines current url plus unique socket id, this is how the phone knows which desktop to send controls to.
+                    const url = `${new URL(`/phone.html?id=${socket.id}`,window.location)}`;
+                    
+                    //the bigger typeNumber, the more data it can hold, the bigger the qr-code
+                    const typeNumber = 4;
+                    //the errorCorrectionLevel makes sure that even if the qr-code is partially damaged or obscured it can still be scanned
+                    const errorCorrectionLevel = 'L';
+                    const qr = qrcode(typeNumber, errorCorrectionLevel);
+                    qr.addData(url);
+                    qr.make();
+                    document.getElementById('qr-code').innerHTML = qr.createImgTag(10);
+                })
+            }
+
+            init();
+        }
+     </script>
+
+  
 </body>
 </html>
