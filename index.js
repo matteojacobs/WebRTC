@@ -22,6 +22,7 @@ io.on("connection", (socket) => {
   // When someone disconnects, remove them from the clients list.
   socket.on("disconnect", () => {
     delete clients[socket.id];
+    
   });
 });
 
