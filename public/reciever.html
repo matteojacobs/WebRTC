@@ -24,7 +24,7 @@
                 socket.on("connect", () => {
                     console.log(`connect: ${socket.id}`);
                     //combines current url plus unique socket id, this is how the phone knows which desktop to send controls to.
-                    const url = `${new URL(`/phone.html?id=${socket.id}`,window.location)}`;
+                    const url = `${new URL(`/sender.html?id=${socket.id}`,window.location)}`;
                     
                     //the bigger typeNumber, the more data it can hold, the bigger the qr-code
                     const typeNumber = 4;
