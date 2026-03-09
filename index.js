@@ -3,13 +3,20 @@
 
 const express = require('express')
 const app = express()
-const http = require('http');
-const server = http.createServer(app);
-const { Server } = require("socket.io");
+const https = require('https');
+const fs = require('fs');
 const os = require('os');
-const io = new Server(server);
-const port = process.env.PORT || 3000;
 
+const options = {
+  key: fs.readFileSync('localhost.key'),
+  cert: fs.readFileSync('localhost.crt')
+};
+
+const server = https.Server(options, app)
+const port = process.env.PORT || 443;
+
+const { Server } = require("socket.io");
+const io = new Server(server);
 
 const clients = {};
 
@@ -54,7 +61,7 @@ server.listen(port, () => {
     for (const iface of networkInterfaces[interfaceName]) {
       if (iface.family === 'IPv4' && !iface.internal) {
         console.log(
-          `Link to project: http://${iface.address}:${port}`,
+          `Link to project: https://${iface.address}:${port}`,
         );
       }
     }
