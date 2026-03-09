@@ -23,7 +23,7 @@
                 initSocket();
             }
 
-            const initSocket = () => {
+            const initSocket = async () => {
                 socket = io.connect("/")
                 socket.on("connect", () => {
                     console.log(`connect: ${socket.id}`);
