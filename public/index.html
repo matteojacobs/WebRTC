@@ -50,6 +50,17 @@
                 })
 
                 socket.on('clients', updatePeerList);
+            
+                socket.on('peerIce', async (myId, candidate, peerId) => {
+                    console.log(`Received peerIce from ${peerId}`, candidate);
+                    await handlePeerIce(myId, candidate, peerId);
+                });
+
+                socket.on('peerAnswer', async (myId, answer, peerId) => {
+                    console.log(`Received peerAnswer from ${peerId}`);
+                    console.log(answer);
+                    await handlePeerAnswer(myId, answer, peerId);
+                });
             }
 
             const updatePeerList = (clients) => {
@@ -65,10 +76,30 @@
 
             const callPeer = async (peerId) => {
                 peerConnection = new RTCPeerConnection(servers)
+
+                peerConnection.onicecandidate = (e) => {
+                    console.log('ice candidate', e.candidate);
+                    socket.emit('peerIce', peerId, e.candidate);
+                };
+
+                //don't understand why this is necessary
+                peerConnection.createDataChannel('init'); 
+
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
                 socket.emit('peerOffer', peerId, offer);
             }
+
+            const handlePeerAnswer = async (myId, answer, peerId) => {
+                await peerConnection.setRemoteDescription(answer);
+            };
+
+            const handlePeerIce = async (myId, candidate, peerId) => {
+                if (!candidate) {
+                    return;
+                }
+                await peerConnection.addIceCandidate(candidate);
+            };
 
             init();
         }
