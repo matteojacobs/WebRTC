@@ -19,11 +19,11 @@
                 const socket = io.connect("/");
 
                 socket.on('connect', () => {
-                    console.log(`Connected: ${socket.id}`);
+                    // console.log(`Connected: ${socket.id}`);
                 });
 
                 socket.on("clients", (clients) => {
-                    console.log("Current clients:", clients);
+                    // console.log("Current clients:", clients);
                 });
             }
 

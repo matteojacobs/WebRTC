@@ -33,16 +33,16 @@ io.on("connection", (socket) => {
   });
 
   socket.on("peerAnswer", (peerId, answer) => {
-    console.log(`Received peerAnswer from ${socket.id} to ${peerId}`);
+    // console.log(`Received peerAnswer from ${socket.id} to ${peerId}`);
     io.to(peerId).emit("peerAnswer", peerId, answer, socket.id);
   });
 
   socket.on("peerIce", (peerId, candidate) => {
-    console.log(`Received peerIce from ${socket.id} to ${peerId}`);
+    // console.log(`Received peerIce from ${socket.id} to ${peerId}`);
     io.to(peerId).emit("peerIce", peerId, candidate, socket.id);
   });
 
-  //broadcast client list
+  //broadcast client listnp
   io.emit("clients", clients);
 });
 
