@@ -35,12 +35,12 @@ io.on("connection", (socket) => {
   });
 
   socket.on("peerOffer", (peerId, offer) => {
-    console.log(`Received peerOffer from ${socket.id} to ${peerId}`);
+    
     io.to(peerId).emit("peerOffer", peerId, offer, socket.id);
   });
 
   socket.on("peerAnswer", (peerId, answer) => {
-    // console.log(`Received peerAnswer from ${socket.id} to ${peerId}`);
+    console.log(`Received peerAnswer from ${socket.id} to ${peerId}`);
     io.to(peerId).emit("peerAnswer", peerId, answer, socket.id);
   });
 
