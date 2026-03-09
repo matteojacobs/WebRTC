@@ -22,8 +22,13 @@ io.on("connection", (socket) => {
   // When someone disconnects, remove them from the clients list.
   socket.on("disconnect", () => {
     delete clients[socket.id];
-    
+    console.log("Socket disconnected", socket.id);
+    // broadcast when somebody disconnects
+    io.emit("clients", clients);
   });
+
+  //broadcast client list
+  io.emit("clients", clients);
 });
 
 app.use(express.static("public"));
@@ -33,7 +38,9 @@ server.listen(port, () => {
   for (const interfaceName in networkInterfaces) {
     for (const iface of networkInterfaces[interfaceName]) {
       if (iface.family === 'IPv4' && !iface.internal) {
-        console.log(`Link to project: http://${iface.address}:${port}`);
+        console.log(
+          `Link to project: http://${iface.address}:${port}`,
+        );
       }
     }
   }
