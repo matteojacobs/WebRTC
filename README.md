@@ -50,3 +50,29 @@ The final project maps **7 sensor variables** to Game of Life parameters:
 
 ---
 
+### Step 5 — WebRTC Streaming
+
+I set up a WebRTC peer-to-peer connection between the phone (controller) and desktop (receiver), following the **P04-simple-peer-to-peer** demo and the video series below:
+
+* 🎬 `webrtc_03-webcam-local-https`
+* 🎬 `webrtc_05-streaming-clients-list`
+* 🎬 `webrtc_06-streaming-create-offer`
+* 🎬 `webrtc_07-streaming-create-answer`
+* 🎬 `webrtc_08-handle-answer`
+* 🎬 `webrtc_09-exchange-ice-candidates`
+
+---
+
+### Step 6 — Debugging Data Channels
+
+After setting up the streaming logic, the WebRTC data channels weren't working. I asked AI why the data channel wasn't being created, and it pointed out that **if no data is sent through a data channel, the browser never actually establishes it**.
+
+The fix was to create a dummy initialisation channel on the peer connection before the offer is made:
+
+```html
+peerConnection.createDataChannel('init');
+```
+
+This forces the data channel to be negotiated during the WebRTC handshake, even if no data is immediately sent through it — ensuring the channel exists and is ready when needed.
+
+---
