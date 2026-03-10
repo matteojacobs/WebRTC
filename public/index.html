@@ -15,7 +15,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==" crossorigin="anonymous"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js" integrity="sha512-0f7Ahsuvr+/P2btTY4mZIw9Vl23lS6LY/Y7amdkmUg2dqsUF+cTe4QjWvj/NIBHJoGksOiqndKQuI9yzn2hB0g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
+    
     <!-- QR-code logic -->
      <script>
         {
@@ -51,15 +51,10 @@
 
                 socket.on('clients', updatePeerList);
             
-                socket.on('peerIce', async (myId, candidate, peerId) => {
-                    console.log(`Received peerIce from ${peerId}`, candidate);
-                    await handlePeerIce(myId, candidate, peerId);
-                });
-
-                socket.on('peerAnswer', async (myId, answer, peerId) => {
-                    console.log(`Received peerAnswer from ${peerId}`);
-                    console.log(answer);
-                    await handlePeerAnswer(myId, answer, peerId);
+                socket.on('signal', async (myId, signal, peerId) => {
+                    console.log(`Received signal from ${peerId}`);
+                    console.log(signal);
+                    peer.signal(signal);
                 });
             }
 
@@ -75,30 +70,10 @@
             };
 
             const callPeer = async (peerId) => {
-                peerConnection = new RTCPeerConnection(servers)
-
-                peerConnection.onicecandidate = (e) => {
-                    console.log('ice candidate', e.candidate);
-                    socket.emit('peerIce', peerId, e.candidate);
-                };
-
-                //don't understand why this is necessary
-                peerConnection.createDataChannel('init'); 
-
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                socket.emit('peerOffer', peerId, offer);
-            }
-
-            const handlePeerAnswer = async (myId, answer, peerId) => {
-                await peerConnection.setRemoteDescription(answer);
-            };
-
-            const handlePeerIce = async (myId, candidate, peerId) => {
-                if (!candidate) {
-                    return;
-                }
-                await peerConnection.addIceCandidate(candidate);
+                peer = new SimplePeer({ initiator: true });
+                peer.on('signal', data => {
+                    socket.emit('signal', peerId, data);
+                });
             };
 
             init();
