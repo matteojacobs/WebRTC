@@ -76,3 +76,9 @@ peerConnection.createDataChannel('init');
 This forces the data channel to be negotiated during the WebRTC handshake, even if no data is immediately sent through it — ensuring the channel exists and is ready when needed.
 
 ---
+
+### Step 7 — Transition to SimplePeer Framework
+
+After completing the manual WebRTC implementation, I received feedback to transition to the **[SimplePeer](https://github.com/feross/simple-peer)** library, as referenced in the course docs at [devinekask/creative-code-4-s26]
+
+---
