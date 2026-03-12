@@ -161,3 +161,10 @@ The event fires continuously whenever the device's physical orientation changes,
 For my use case I only needed `beta` and `gamma`, so I added a `window.addEventListener("deviceorientation", ...)` inside the `orientationData()` function. Each time the event fires it reads those two values, formats them to one decimal place, and updates the text content of the `#tilt-display` h2 element on the page in real time.
 
 The event does not need to be polled — it pushes updates automatically as the device moves, so the display stays live with no extra logic needed.
+
+---
+
+## Step 11 — Gyroscope
+
+Added gyroscope logic, mostly by copying the accelerometer logic and tweaking it. Used the MDN docs as reference:
+https://developer.mozilla.org/en-US/docs/Web/API/Gyroscope
