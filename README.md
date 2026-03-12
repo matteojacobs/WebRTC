@@ -43,8 +43,8 @@ The final project maps **7 sensor variables** to Game of Life parameters:
 | Accelerometer | `tiltX / tiltY` | Smooth and continuous — maps intuitively to 2D space |
 | Gyroscope | `gyroMagnitude` | Single number for total rotational energy |
 | Microphone | `bassEnergy` | Reacts to voice, music, clapping — expressive input |
-| Camera | `dominantColor` | Provides live R/G/B values from the environment |
-| Screen / Touch | `touchVelocity` | Captures gesture speed and intensity |
+| Camera | `dominantColor` | Provides live R/G/B values from the environment | *using if extra time*
+| Screen / Touch | `touchVelocity` | Captures gesture speed and intensity | *not using anymore*
 | Magnetometer | `compassHeading` | 0–360° rotation, slow and smooth |
 | Battery | `batteryLevel` | 0.0–1.0, slow-changing — acts as a global mood modifier |
 
