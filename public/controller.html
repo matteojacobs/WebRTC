@@ -7,7 +7,8 @@
 </head>
 <body>
     <h1>You connected phone and computer</h1>
-
+    <button id="btn">Request Permission</button>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js" integrity="sha512-0f7Ahsuvr+/P2btTY4mZIw9Vl23lS6LY/Y7amdkmUg2dqsUF+cTe4QjWvj/NIBHJoGksOiqndKQuI9yzn2hB0g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>    
 
     <script src="/socket.io/socket.io.js"></script>
@@ -16,7 +17,7 @@
             let socket;
             let peer;
             let peerConnection;
-            let sensors = ["motion"]
+            let sensors = ["Orientation"]
 
             const servers = {
                 iceServers: [{
@@ -25,62 +26,69 @@
             };
 
             const init = () => {
-                permissionRequests();
                 initSocket();
+
+                document.getElementById('btn').addEventListener('click', async () => {
+                    const allGranted = await requestOrientation();
+                    if (allGranted) {
+                        startDataCollection();
+                    } else {
+                        console.log("Permission not granted");
+                    }
+                });
             }
 
             
 
             const permissionRequests = async (sensor) => {
                 const results = {
-                    motion: false
+                    Orientation: false
                 };
 
-                results.motion = await requestMotion();
+                results.Orientation = await requestOrientation();
 
                 const allGranted = Object.values(results).every(v => v === true);
-
-                if (allGranted) {
-                    startDataCollection(); // your next stage
-                } else {
-                    console.log("Not all permissions granted:", results);
-                }
-
-                // for (const sensor of sensors) {
-                //     if (sensor === "motion") {
-                //         results.motion = await requestMotionPermission();
-                //     }
-                // }
-                // return results;
+                return allGranted
             };
 
-            const requestMotion = async () => {
+            const requestOrientation = async () => {
                 try {
                     // iOS 13+ requires explicit permission
-                    if (typeof DeviceMotionEvent !== "undefined" &&
-                        typeof DeviceMotionEvent.requestPermission === "function") {
+                    if (typeof DeviceOrientationEvent !== "undefined" &&
+                        typeof DeviceOrientationEvent.requestPermission === "function") {
                         
-                        const permission = await DeviceMotionEvent.requestPermission();
+                        const permission = await DeviceOrientationEvent.requestPermission();
                         return permission === "granted";
                     }
 
                     // Android / desktop — permission not required, just check API exists
-                    return typeof DeviceMotionEvent !== "undefined";
+                    return typeof DeviceOrientationEvent !== "undefined";
 
                 } catch (error) {
-                    console.log("Motion permission failed:", error);
+                    console.log("Orientation permission failed:", error);
                     return false;
                 }
             };
 
             const startDataCollection = () => {
-                motionData();
+                orientationData();
             }
 
-            const motionData = () => {
-                
-            }
+            const orientationData = () => {
+                let tiltDisplay = document.querySelector('#tilt-display');
+                if (!tiltDisplay) {
+                    tiltDisplay = document.createElement('h2');
+                    tiltDisplay.id = 'tilt-display';
+                    document.body.appendChild(tiltDisplay);
+                }
 
+                window.addEventListener('deviceorientation', (event) => {
+                    const vertical = event.beta !== null ? event.beta.toFixed(1) : 'N/A';    // front/back tilt (-180 to 180)
+                    const horizontal = event.gamma !== null ? event.gamma.toFixed(1) : 'N/A'; // left/right tilt (-90 to 90)
+
+                    tiltDisplay.textContent = `↕ Vertical: ${vertical}°  |  ↔ Horizontal: ${horizontal}°`;
+                });
+            }
 
             
 
