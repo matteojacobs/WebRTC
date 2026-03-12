@@ -134,3 +134,30 @@ socket.on('signal', async (myId, signal, peerId) => {
 I used AI (Claude) to diagnose this bug. I pasted the error and my code into the chat, and it identified that `peer` was never initialised before `.signal()` was called on it. It also pointed out that the commented-out `answerPeerOffer` function I had written was actually the right approach — the fix was just to inline that logic directly into the signal handler.
 
 ---
+
+## Step 9 - Requesting Device Orientation Permission
+
+To read tilt data from the phone, I needed to request permission to access the device's gyroscope and accelerometer sensors.
+
+I referenced the MDN docs for [`DeviceOrientationEvent.requestPermission()`](https://developer.mozilla.org/en-US/docs/Web/API/DeviceOrientationEvent/requestPermission_static) which explained that:
+- The method is **iOS/Safari only** — Android and desktop don't require it
+- It returns a Promise resolving to `"granted"` or `"denied"`
+- It requires **transient activation**, meaning it must be called directly from a user gesture like a button click — it cannot be called on page load
+
+With the help of AI I implemented a `requestOrientation()` function that checks if `DeviceOrientationEvent.requestPermission` exists as a function before calling it (to handle the Android/desktop case), and wrapped it in a try/catch. The permission request is triggered by a button click, and only if it resolves to `"granted"` does the app start listening to `deviceorientation` events to read `event.beta` (vertical tilt) and `event.gamma` (horizontal tilt).
+
+---
+
+## Step 10 - Reading Tilt Data with the deviceorientation Event
+
+Once permission was granted, I needed to actually read the tilt values. I referenced the MDN docs for the [`deviceorientation`](https://developer.mozilla.org/en-US/docs/Web/API/Window/deviceorientation_event) event on `window`.
+
+The event fires continuously whenever the device's physical orientation changes, and each event carries three read-only properties:
+
+- `event.beta` — rotation around the **x-axis** (front/back tilt), ranging from -180° to 180°
+- `event.gamma` — rotation around the **y-axis** (left/right tilt), ranging from -90° to 90°
+- `event.alpha` — rotation around the **z-axis** (compass heading), ranging from 0° to 360°
+
+For my use case I only needed `beta` and `gamma`, so I added a `window.addEventListener("deviceorientation", ...)` inside the `orientationData()` function. Each time the event fires it reads those two values, formats them to one decimal place, and updates the text content of the `#tilt-display` h2 element on the page in real time.
+
+The event does not need to be polled — it pushes updates automatically as the device moves, so the display stays live with no extra logic needed.
