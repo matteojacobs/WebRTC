@@ -42,10 +42,12 @@
 
             const permissionRequests = async (sensor) => {
                 const results = {
-                    Orientation: false
+                    Orientation: false,
+                    Gyro: false,
                 };
 
                 results.Orientation = await requestOrientation();
+                results.Gyro = await requestGyro();
 
                 const allGranted = Object.values(results).every(v => v === true);
                 return allGranted
@@ -70,8 +72,29 @@
                 }
             };
 
+
+            const requestGyro = async () => {
+                try {
+                    // iOS 13+ requires explicit permission
+                    if (typeof DeviceMotionEvent !== "undefined" &&
+                        typeof DeviceMotionEvent.requestPermission === "function") {
+                        
+                        const permission = await DeviceMotionEvent.requestPermission();
+                        return permission === "granted";
+                    }
+
+                    // Android / desktop — permission not required, just check API exists
+                    return typeof DeviceMotionEvent !== "undefined";
+
+                } catch (error) {
+                    console.log("Gyro permission failed:", error);
+                    return false;
+                }
+            };
+
             const startDataCollection = () => {
                 orientationData();
+                gyroData();
             }
 
             const orientationData = () => {
@@ -89,6 +112,24 @@
                     tiltDisplay.textContent = `↕ Vertical: ${vertical}°  |  ↔ Horizontal: ${horizontal}°`;
                 });
             }
+
+            const gyroData = () => {
+                let gyroMagnitudeDisplay = document.querySelector('#gyroMagnitude-display');
+                if (!gyroMagnitudeDisplay) {
+                    gyroMagnitudeDisplay = document.createElement('h2');
+                    gyroMagnitudeDisplay.id = 'gyroMagnitude-display';
+                    document.body.appendChild(gyroMagnitudeDisplay);
+                }
+
+                window.addEventListener('devicemotion', (event) => {
+                    const rotationRate = event.rotationRate;
+                    const gyroMagnitude = Math.sqrt(rotationRate.alpha**2 + rotationRate.beta**2 + rotationRate.gamma**2)
+                    const mappedGyroMagnitude = Math.min(Math.round((gyroMagnitude / 200) * 100), 100);
+                    gyroMagnitudeDisplay.textContent = `rotation rate: ${mappedGyroMagnitude}`;
+                });
+            }
+
+            
 
             
 
