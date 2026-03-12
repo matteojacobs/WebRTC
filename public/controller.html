@@ -14,6 +14,7 @@
     <script>
         {
             let socket;
+            let peer;
             let peerConnection;
 
             const servers = {
@@ -23,8 +24,11 @@
             };
 
             const init = () => {
+                //variableData();
                 initSocket();
             }
+
+
 
             const initSocket = () => {
                 socket = io.connect("/");
@@ -40,17 +44,33 @@
                 socket.on('signal', async (myId, signal, peerId) => {
                     console.log(`Received signal from ${peerId}`);
                     console.log(signal);
+                    if (!peer) {
+                        peer = new SimplePeer({ initiator: false });
+
+                        peer.on('signal', data => {
+                            socket.emit('signal', peerId, data);
+                        });
+
+                        peer.on('connect', () => {
+                            console.log('Peer connection established!');
+                        });
+
+                        peer.on('error', err => {
+                            console.error('Peer error:', err);
+                        });
+                    }
+
                     peer.signal(signal);
                 });            
             }
 
 
-            const answerPeerOffer = async (myId, offer, peerId) => {
-                peer = new SimplePeer({ initiator: false });
-                peer.on('signal', data => {
-                    socket.emit('signal', peerId, data);
-                });
-            };
+            // const answerPeerOffer = async (myId, offer, peerId) => {
+            //     peer = new SimplePeer({ initiator: false });
+            //     peer.on('signal', data => {
+            //         socket.emit('signal', peerId, data);
+            //     });
+            // };
 
             init();
         }

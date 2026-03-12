@@ -35,7 +35,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on('signal', (peerId, signal) => {
-    console.log("yeeahhaha")
     io.to(peerId).emit('signal', peerId, signal, socket.id);
   });
 
