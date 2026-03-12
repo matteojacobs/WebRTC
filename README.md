@@ -82,3 +82,55 @@ This forces the data channel to be negotiated during the WebRTC handshake, even 
 After completing the manual WebRTC implementation, I received feedback to transition to the **[SimplePeer](https://github.com/feross/simple-peer)** library, as referenced in the course docs at [devinekask/creative-code-4-s26]
 
 ---
+
+## Step 8 — Fixing the SimplePeer Signal Error
+ 
+### The Problem
+ 
+When the phone (`controller.html`) received a WebRTC signal from the desktop, the following error was thrown in the browser console:
+ 
+```
+Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'signal')
+```
+ 
+The error occurred inside the `socket.on('signal', ...)` handler:
+ 
+```javascript
+socket.on('signal', async (myId, signal, peerId) => {
+    peer.signal(signal); // ← peer was undefined
+});
+```
+ 
+`peer` was declared with `let peer;` but never assigned a `new SimplePeer(...)` instance before `.signal()` was called on it.
+ 
+### The Fix
+ 
+The peer needs to be created the first time a signal arrives, since the controller (phone) is the **non-initiator** — it waits for the desktop to reach out first.
+ 
+```javascript
+socket.on('signal', async (myId, signal, peerId) => {
+    if (!peer) {
+        peer = new SimplePeer({ initiator: false });
+ 
+        peer.on('signal', data => {
+            socket.emit('signal', peerId, data);
+        });
+ 
+        peer.on('connect', () => {
+            console.log('Peer connection established!');
+        });
+ 
+        peer.on('error', err => {
+            console.error('Peer error:', err);
+        });
+    }
+ 
+    peer.signal(signal);
+});
+```
+ 
+### How AI Helped
+ 
+I used AI (Claude) to diagnose this bug. I pasted the error and my code into the chat, and it identified that `peer` was never initialised before `.signal()` was called on it. It also pointed out that the commented-out `answerPeerOffer` function I had written was actually the right approach — the fix was just to inline that logic directly into the signal handler.
+
+---
