@@ -168,3 +168,10 @@ The event does not need to be polled — it pushes updates automatically as the 
 
 Added gyroscope logic, mostly by copying the accelerometer logic and tweaking it. Used the MDN docs as reference:
 https://developer.mozilla.org/en-US/docs/Web/API/Gyroscope
+
+---
+
+## Step 11 — Gyroscope
+
+Added compass logic, mostly by copying the orientationData logic and tweaking it. Used the MDN docs as reference:
+https://developer.mozilla.org/en-US/docs/Web/API/DeviceOrientationEvent

@@ -197,11 +197,6 @@
                             heading = (360 - event.alpha) % 360;
                         }
 
-                        if (heading === null) {
-                            compassDisplay.textContent = `facing direction: unknown`;
-                            return;
-                        }
-
                     const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
                     const compassOrientation = directions[Math.round(heading / 45) % 8];
 
