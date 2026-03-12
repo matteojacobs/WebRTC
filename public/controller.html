@@ -16,6 +16,7 @@
             let socket;
             let peer;
             let peerConnection;
+            let sensors = ["motion"]
 
             const servers = {
                 iceServers: [{
@@ -24,11 +25,64 @@
             };
 
             const init = () => {
-                //variableData();
+                permissionRequests();
                 initSocket();
             }
 
+            
 
+            const permissionRequests = async (sensor) => {
+                const results = {
+                    motion: false
+                };
+
+                results.motion = await requestMotion();
+
+                const allGranted = Object.values(results).every(v => v === true);
+
+                if (allGranted) {
+                    startDataCollection(); // your next stage
+                } else {
+                    console.log("Not all permissions granted:", results);
+                }
+
+                // for (const sensor of sensors) {
+                //     if (sensor === "motion") {
+                //         results.motion = await requestMotionPermission();
+                //     }
+                // }
+                // return results;
+            };
+
+            const requestMotion = async () => {
+                try {
+                    // iOS 13+ requires explicit permission
+                    if (typeof DeviceMotionEvent !== "undefined" &&
+                        typeof DeviceMotionEvent.requestPermission === "function") {
+                        
+                        const permission = await DeviceMotionEvent.requestPermission();
+                        return permission === "granted";
+                    }
+
+                    // Android / desktop — permission not required, just check API exists
+                    return typeof DeviceMotionEvent !== "undefined";
+
+                } catch (error) {
+                    console.log("Motion permission failed:", error);
+                    return false;
+                }
+            };
+
+            const startDataCollection = () => {
+                motionData();
+            }
+
+            const motionData = () => {
+                
+            }
+
+
+            
 
 
             const initSocket = () => {
@@ -43,8 +97,8 @@
                 });
 
                 socket.on('signal', async (myId, signal, peerId) => {
-                    console.log(`Received signal from ${peerId}`);
-                    console.log(signal);
+                    // console.log(`Received signal from ${peerId}`);
+                    // console.log(signal);
                     if (!peer) {
                         peer = new SimplePeer({ initiator: false });
 
@@ -53,25 +107,17 @@
                         });
 
                         peer.on('connect', () => {
-                            console.log('Peer connection established!');
+                            // console.log('Peer connection established!');
                         });
 
                         peer.on('error', err => {
-                            console.error('Peer error:', err);
+                            // console.error('Peer error:', err);
                         });
                     }
 
                     peer.signal(signal);
                 });            
             }
-
-
-            // const answerPeerOffer = async (myId, offer, peerId) => {
-            //     peer = new SimplePeer({ initiator: false });
-            //     peer.on('signal', data => {
-            //         socket.emit('signal', peerId, data);
-            //     });
-            // };
 
             init();
         }
