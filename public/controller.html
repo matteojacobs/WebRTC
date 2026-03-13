@@ -32,32 +32,30 @@
                 initSocket();
 
                 document.getElementById('btn').addEventListener('click', async () => {
-                    const allGranted = await permissionRequests();
-                    if (allGranted) {
+                    const allAsked = await permissionRequests();
+                    if (allAsked) {
                         startDataCollection();
-                    } else {
-                        console.log("Permission not granted");
-                    }
+                    } 
                 });
             }
 
             
 
-            const permissionRequests = async (sensor) => {
+            const permissionRequests = async () => {
                 const results = {
                     Orientation: false,
                     Gyro: false,
-                    // Microphone: false,
-                    // battery: false,
+                    Microphone: false,
+                    battery: false,
                 };
 
                 results.Orientation = await requestOrientation();
                 results.Gyro = await requestGyro();
-                // results.battery = await requestBattery();
-                // results.Microphone = await requestMicrophone();
+                results.battery = await requestBattery();
+                results.Microphone = await requestMicrophone();
 
-                const allGranted = Object.values(results).every(v => v === true);
-                return allGranted
+                const allAsked = Object.values(results);
+                return allAsked
             };
 
             const requestOrientation = async () => {
@@ -74,11 +72,9 @@
                     return typeof DeviceOrientationEvent !== "undefined";
 
                 } catch (error) {
-                    console.log("Orientation permission failed:", error);
                     return false;
                 }
             };
-
 
             const requestGyro = async () => {
                 try {
@@ -94,7 +90,6 @@
                     return typeof DeviceMotionEvent !== "undefined";
 
                 } catch (error) {
-                    console.log("Gyro permission failed:", error);
                     return false;
                 }
             };
@@ -116,71 +111,75 @@
                     return true;
 
                 } catch (error) {
-                    console.log("Microphone permission failed:", error);
+                    return false;
                 }
             }
 
             const requestBattery = async () => {
-                try {
-                    if (("getBattery" in navigator)) {
-                        batteryManager = await navigator.getBattery();
-                        return true
-                    }
+                if (!navigator.getBattery) {
                     return false;
-
-                } catch (error) {
-                    return false;
+                } 
+                else {
+                    return true;
                 }
             }
 
-            const startDataCollection = () => {
-                orientationData();
-                gyroData();
-                // microphoneData();
-                compassData();
-                // batteryData();
+            const startDataCollection = async () => {
+                setInterval(async () => {
+                    const sensorData = {
+                    tiltY: null,
+                    tiltX: null,
+                    gyroMagnitude: null,
+                    bassEnergy: null,
+                    compassOrientation: null,
+                    battery: null
+
+                }
+                const { vertical, horizontal } = await orientationData();
+                const { mappedGyroMagnitude } = await gyroData();
+                const { compassOrientation } = await compassData();
+
+                sensorData.tiltY = horizontal;
+                sensorData.tiltX = vertical;
+                sensorData.gyroMagnitude = mappedGyroMagnitude;
+                sensorData.bassEnergy = microphoneData();
+                sensorData.compassOrientation = compassOrientation;
+                sensorData.battery = await batteryData();
+
+                console.log(sensorData)
+                }, 100)
+
+                
             }
+
+            
 
             const orientationData = () => {
-                let tiltDisplay = document.querySelector('#tilt-display');
-                if (!tiltDisplay) {
-                    tiltDisplay = document.createElement('h2');
-                    tiltDisplay.id = 'tilt-display';
-                    document.body.appendChild(tiltDisplay);
-                }
-
-                window.addEventListener('deviceorientation', (event) => {
+                return new Promise((resolve) => {
+                    window.addEventListener('deviceorientation', (event) => {
                     const vertical = event.beta !== null ? event.beta.toFixed(1) : 'N/A';    // front/back tilt (-180 to 180)
                     const horizontal = event.gamma !== null ? event.gamma.toFixed(1) : 'N/A'; // left/right tilt (-90 to 90)
 
-                    tiltDisplay.textContent = `↕ Vertical: ${vertical}°  |  ↔ Horizontal: ${horizontal}°`;
+                    resolve ({ vertical, horizontal });
+                }, {once: true});
+                
                 });
             }
 
             const gyroData = () => {
-                let gyroMagnitudeDisplay = document.querySelector('#gyroMagnitude-display');
-                if (!gyroMagnitudeDisplay) {
-                    gyroMagnitudeDisplay = document.createElement('h2');
-                    gyroMagnitudeDisplay.id = 'gyroMagnitude-display';
-                    document.body.appendChild(gyroMagnitudeDisplay);
-                }
-
-                window.addEventListener('devicemotion', (event) => {
+                return new Promise((resolve) => {
+                    window.addEventListener('devicemotion', (event) => {
                     const rotationRate = event.rotationRate;
                     const gyroMagnitude = Math.sqrt(rotationRate.alpha**2 + rotationRate.beta**2 + rotationRate.gamma**2)
-                    const mappedGyroMagnitude = Math.min(Math.round((gyroMagnitude / 200) * 100), 100);
-                    gyroMagnitudeDisplay.textContent = `rotation rate: ${mappedGyroMagnitude}`;
+                    const mappedGyroMagnitude = Math.min(Math.round((gyroMagnitude / 500) * 100), 100);
+                    
+                    resolve({ mappedGyroMagnitude });
+                }, {once: true});
+               
                 });
             }
 
             const microphoneData = () => {
-                let microphoneDisplay = document.querySelector('#microphone-display');
-                if (!microphoneDisplay) {
-                    microphoneDisplay = document.createElement('h2');
-                    microphoneDisplay.id = 'microphone-display';
-                    document.body.appendChild(microphoneDisplay);
-                }
-
                 analyser.fftSize = 256;
 
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -188,19 +187,14 @@
 
                 const bassRange = Math.floor(dataArray.length * 0.1);
                 const bassSlice = dataArray.slice(0, bassRange);
-                const bassEnergy = bassSlice.reduce((sum, v) => sum + v, 0) / bassRange;
-                microphoneDisplay.textContent = `bass energy: ${bassEnergy}`;
+                const bassEnergy = Math.round((bassSlice.reduce((sum, v) => sum + v, 0) / bassRange / 255) * 99) + 1;
+
+                return bassEnergy
             }
             
             const compassData = () => {
-                let compassDisplay = document.querySelector('#compass-display');
-                if (!compassDisplay) {
-                    compassDisplay = document.createElement('h2');
-                    compassDisplay.id = 'compass-display';
-                    document.body.appendChild(compassDisplay);
-                }
-
-                window.addEventListener('deviceorientation', (event) => {
+                return new Promise((resolve) => {
+                    window.addEventListener('deviceorientation', (event) => {
                     let heading = null
 
                     if (event.webkitCompassHeading !== undefined) {
@@ -214,24 +208,22 @@
                     const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
                     const compassOrientation = directions[Math.round(heading / 45) % 8];
 
-                    compassDisplay.textContent = `facing direction: ${compassOrientation}`;
+                    resolve ({ compassOrientation});
+                }, {once: true});
+                
                 });
 
             }
 
             const batteryData = async () => {
-                let batteryDisplay = document.querySelector('#battery-display');
-                if (!batteryDisplay) {
-                    batteryDisplay = document.createElement('h2');
-                    batteryDisplay.id = 'battery-display';
-                    document.body.appendChild(batteryDisplay);
-                }
+                const battery = await navigator.getBattery();
+                const batteryPercentage = Math.round(battery.level * 100);
 
-                batteryDisplay.textContent = `Battery level: ${batteryManager.level * 100}%`;
+                battery.addEventListener("levelchange", () =>{
+                    batteryPercentage = Math.round(battery.level * 100);
+                })
 
-                batteryManager.addEventListener('levelchange', () => {
-                    batteryDisplay.textContent = `Battery level: ${batteryManager.level * 100}%`; // read fresh value inside listener
-                });
+                return batteryPercentage
 
             }
 

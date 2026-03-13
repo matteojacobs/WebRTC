@@ -175,3 +175,10 @@ https://developer.mozilla.org/en-US/docs/Web/API/Gyroscope
 
 Added compass logic, mostly by copying the orientationData logic and tweaking it. Used the MDN docs as reference:
 https://developer.mozilla.org/en-US/docs/Web/API/DeviceOrientationEvent
+
+---
+
+## Step 13 — Battery
+
+Added battery logic
+
