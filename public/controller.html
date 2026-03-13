@@ -17,6 +17,7 @@
             let socket;
             let peer;
             let peerConnection;
+            let batteryManager = null;
             // let micStream;
             // let getAudioContext;
             // let analyser;
@@ -47,10 +48,12 @@
                     Orientation: false,
                     Gyro: false,
                     // Microphone: false,
+                    // battery: false,
                 };
 
                 results.Orientation = await requestOrientation();
                 results.Gyro = await requestGyro();
+                // results.battery = await requestBattery();
                 // results.Microphone = await requestMicrophone();
 
                 const allGranted = Object.values(results).every(v => v === true);
@@ -117,11 +120,25 @@
                 }
             }
 
+            const requestBattery = async () => {
+                try {
+                    if (("getBattery" in navigator)) {
+                        batteryManager = await navigator.getBattery();
+                        return true
+                    }
+                    return false;
+
+                } catch (error) {
+                    return false;
+                }
+            }
+
             const startDataCollection = () => {
                 orientationData();
                 gyroData();
                 // microphoneData();
                 compassData();
+                // batteryData();
             }
 
             const orientationData = () => {
@@ -183,9 +200,6 @@
                     document.body.appendChild(compassDisplay);
                 }
 
-                
-                
-
                 window.addEventListener('deviceorientation', (event) => {
                     let heading = null
 
@@ -201,6 +215,22 @@
                     const compassOrientation = directions[Math.round(heading / 45) % 8];
 
                     compassDisplay.textContent = `facing direction: ${compassOrientation}`;
+                });
+
+            }
+
+            const batteryData = async () => {
+                let batteryDisplay = document.querySelector('#battery-display');
+                if (!batteryDisplay) {
+                    batteryDisplay = document.createElement('h2');
+                    batteryDisplay.id = 'battery-display';
+                    document.body.appendChild(batteryDisplay);
+                }
+
+                batteryDisplay.textContent = `Battery level: ${batteryManager.level * 100}%`;
+
+                batteryManager.addEventListener('levelchange', () => {
+                    batteryDisplay.textContent = `Battery level: ${batteryManager.level * 100}%`; // read fresh value inside listener
                 });
 
             }

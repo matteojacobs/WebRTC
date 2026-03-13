@@ -171,7 +171,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/Gyroscope
 
 ---
 
-## Step 11 — Gyroscope
+## Step 12 — Compass
 
 Added compass logic, mostly by copying the orientationData logic and tweaking it. Used the MDN docs as reference:
 https://developer.mozilla.org/en-US/docs/Web/API/DeviceOrientationEvent
