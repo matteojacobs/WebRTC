@@ -17,10 +17,7 @@
             let socket;
             let peer;
             let peerConnection;
-            let batteryManager = null;
-            // let micStream;
-            // let getAudioContext;
-            // let analyser;
+            let permissionResults
 
             const servers = {
                 iceServers: [{
@@ -34,7 +31,7 @@
                 document.getElementById('btn').addEventListener('click', async () => {
                     const allAsked = await permissionRequests();
                     if (allAsked) {
-                        startDataCollection();
+                        dataCollection();
                     } 
                 });
             }
@@ -42,19 +39,20 @@
             
 
             const permissionRequests = async () => {
-                const results = {
-                    Orientation: false,
-                    Gyro: false,
-                    Microphone: false,
-                    battery: false,
+                const permissionRequestResults = {
+                    Orientation: "denied",
+                    Gyro: "denied",
+                    Microphone: "denied",
+                    battery: "denied",
                 };
 
-                results.Orientation = await requestOrientation();
-                results.Gyro = await requestGyro();
-                results.battery = await requestBattery();
-                results.Microphone = await requestMicrophone();
+                permissionRequestResults.Orientation = await requestOrientation();
+                permissionRequestResults.Gyro = await requestGyro();
+                permissionRequestResults.battery = await requestBattery();
+                permissionRequestResults.Microphone = await requestMicrophone();
 
-                const allAsked = Object.values(results);
+                permissionResults = permissionRequestResults;
+                const allAsked = Object.values(permissionRequestResults);
                 return allAsked
             };
 
@@ -62,17 +60,29 @@
                 try {
                     // iOS 13+ requires explicit permission
                     if (typeof DeviceOrientationEvent !== "undefined" &&
-                        typeof DeviceOrientationEvent.requestPermission === "function") {
+                        typeof DeviceOrientationEvent?.requestPermission === "function") {
                         
                         const permission = await DeviceOrientationEvent.requestPermission();
-                        return permission === "granted";
+                        if (permission !== "granted") return "denied";
+                    } else if (typeof DeviceOrientationEvent === "undefined") {
+                        return "impossible";
                     }
 
-                    // Android / desktop — permission not required, just check API exists
-                    return typeof DeviceOrientationEvent !== "undefined";
+                    // Verify the device actually sends orientation data
+                    const hasData = await new Promise((resolve) => {
+                        const timeout = setTimeout(() => resolve(false), 500);
+
+                        window.addEventListener("deviceorientation", (e) => {
+                            clearTimeout(timeout);
+                            // Check that at least one axis has real data
+                            resolve(e.alpha !== null || e.beta !== null || e.gamma !== null);
+                        }, { once: true });
+                    });
+
+                    return hasData ? "granted" : "impossible";
 
                 } catch (error) {
-                    return false;
+                    return "impossible";
                 }
             };
 
@@ -83,14 +93,25 @@
                         typeof DeviceMotionEvent.requestPermission === "function") {
                         
                         const permission = await DeviceMotionEvent.requestPermission();
-                        return permission === "granted";
+                        if (permission !== "granted") return "denied";
+                    } else if (typeof DeviceMotionEvent === "undefined") {
+                        return "impossible";
                     }
 
-                    // Android / desktop — permission not required, just check API exists
-                    return typeof DeviceMotionEvent !== "undefined";
+                    // Verify the device actually sends motion data
+                    const hasData = await new Promise((resolve) => {
+                        const timeout = setTimeout(() => resolve(false), 500);
+
+                        window.addEventListener("devicemotion", (e) => {
+                            clearTimeout(timeout);
+                            resolve(e.rotationRate?.alpha !== null || e.rotationRate?.beta  !== null || e.rotationRate?.gamma !== null);
+                        }, { once: true });
+                    });
+
+                    return hasData ? "granted" : "impossible";
 
                 } catch (error) {
-                    return false;
+                    return "impossible";
                 }
             };
 
@@ -108,23 +129,23 @@
                     const source = audioContext.createMediaStreamSource(micStream);
                     source.connect(analyser);
 
-                    return true;
+                    return "granted";
 
                 } catch (error) {
-                    return false;
+                    return "denied";
                 }
             }
 
             const requestBattery = async () => {
                 if (!navigator.getBattery) {
-                    return false;
+                    return "impossible";
                 } 
                 else {
-                    return true;
+                    return "granted";
                 }
             }
 
-            const startDataCollection = async () => {
+            const dataCollection = async () => {
                 setInterval(async () => {
                     const sensorData = {
                     tiltY: null,
@@ -135,6 +156,7 @@
                     battery: null
 
                 }
+
                 const { vertical, horizontal } = await orientationData();
                 const { mappedGyroMagnitude } = await gyroData();
                 const { compassOrientation } = await compassData();
@@ -146,8 +168,13 @@
                 sensorData.compassOrientation = compassOrientation;
                 sensorData.battery = await batteryData();
 
-                console.log(sensorData)
-                }, 100)
+                const sensorInformation = {
+                    permissions: permissionResults,
+                    sensors: sensorData
+                };
+
+                console.log(sensorInformation);
+                }, 100);
 
                 
             }
