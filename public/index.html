@@ -25,7 +25,7 @@
             let peer
             let socket;
             let peerConnection;
-            let phoneData;
+            let phoneData = null;
 
             const servers = {
                 iceServers: [{
@@ -39,15 +39,11 @@
             }
 
             const initSocket = async () => {
-                socket = io.connect("/")
+                socket = io.connect("/");
                 socket.on("connect", () => {
-                    // console.log(`connect: ${socket.id}`);
-                    //combines current url plus unique socket id, this is how the phone knows which desktop to send controls to.
                     const url = `${new URL(`/controller.html?id=${socket.id}`,window.location)}`;
                     
-                    //the bigger typeNumber, the more data it can hold, the bigger the qr-code
                     const typeNumber = 4;
-                    //the errorCorrectionLevel makes sure that even if the qr-code is partially damaged or obscured it can still be scanned
                     const errorCorrectionLevel = 'L';
                     const qr = qrcode(typeNumber, errorCorrectionLevel);
                     qr.addData(url);
@@ -64,15 +60,14 @@
 
             const updatePeerList = (clients) => {
                 for (const clientId in clients) {
-                    const isMyOwnId = (clientId === socket.id);
-                    if (clients.hasOwnProperty(clientId) && !isMyOwnId) {
+                    if (clients.hasOwnProperty(clientId) && clientId !== socket.id) {
                         const client = clients[clientId];
                         callPeer(client.id);
                     }
                 }
             };
 
-            const callPeer = async (peerId) => {
+            const callPeer = (peerId) => {
                 peer = new SimplePeer({ 
                     initiator: true,
                     config: servers
@@ -121,25 +116,23 @@
                     white:  '#ffffff',
                 };
 
+                const colorKeys = Object.keys(colors);
                 const particleCount = 200;
                 let groups = {};
 
                 const createParticle = () => ({
-                    x:         Math.random() * width,
-                    y:         Math.random() * height,
+                    x: Math.random() * width,
+                    y: Math.random() * height,
                     velocityX: 0,
                     velocityY: 0,
                 });
 
                 const spawnGroups = () => {
-                    groups = {};
-                    for (const color in colors) {
-                    groups[color] = [];
-                    for (let i = 0; i < particleCount; i++) {
-                        groups[color].push(createParticle());
-                    }
-                    }
-                };
+                groups = {};
+                for (const color in colors) {
+                    groups[color] = Array.from({ length: particleCount }, createParticle);
+                }
+            };
 
                 spawnGroups();
 
@@ -155,8 +148,7 @@
 
                 // ─────────────────────────────────────────
                 //  FORCE MATRIX
-                // ─────────────────────────────────────────
-                const colorKeys = Object.keys(colors);
+                // ─────────────────────────────────────────                
                 let matrix = {};
 
                 const randomForce = () => (Math.random() * 2 - 1) - 0.3;
@@ -164,15 +156,45 @@
                 const randomizeMatrix = () => {
                     matrix = {};
                     for (const a of colorKeys) {
-                    matrix[a] = {};
-                    for (const b of colorKeys) {
-                        matrix[a][b] = randomForce();
-                    }
+                        matrix[a] = {};
+                        for (const b of colorKeys) {
+                            matrix[a][b] = randomForce();
+                        }
                     }
                 };
 
                 randomizeMatrix();
 
+                // ─────────────────────────────────────────
+                //  PHONE DATA RULESET
+                //  This function modifies the force matrix based on phone sensors
+                // ─────────────────────────────────────────
+                const applyPhoneDataRules = () => {
+                    if (!phoneData || !phoneData.permissions || !phoneData.sensors) return;
+
+                    const permissions = phoneData.permissions;
+                    const sensors = phoneData.sensors;
+
+                    // Rule 1: Gyro controls tilt-based forces
+                    if (permissions.Gyro === 'granted') {
+
+                    }
+
+                    // Rule 2: Microphone controls energy/bass-based pulsing
+                    if (permissions.Microphone === 'granted') {
+                
+                    }
+
+                    // Rule 3: Battery affects overall system energy/friction
+                    if (permissions.Battery === 'granted') {
+                      
+                    }
+
+                    // Rule 4: Orientation affects particle direction preference
+                    if (permissions.Orientation === 'granted') {
+                       
+                    }
+                };
 
                 // ─────────────────────────────────────────
                 //  CORE FORCE FUNCTION
@@ -181,6 +203,12 @@
                     for (let i = 0; i < groupA.length; i++) {
                     let forceX = 0;
                     let forceY = 0;
+
+                    // Apply compass direction if available
+                    if (window.compassDirection) {
+                        forceX += window.compassDirection.x * 0.1;
+                        forceY += window.compassDirection.y * 0.1;
+                    }
 
                     for (let j = 0; j < groupB.length; j++) {
                         const distanceX = groupB[j].x - groupA[i].x;
@@ -248,11 +276,21 @@
                 // ─────────────────────────────────────────
                 const update = () => {
                     if (paused) return;
+                    
+                    // Apply phone data rules to modify the force matrix
+                    applyPhoneDataRules();
+                    
                     for (const a of colorKeys) {
                     for (const b of colorKeys) {
                         rule(groups[a], groups[b], matrix[a][b]);
                     }
                     }
+                    
+                    // Reset dynamic values each frame
+                    window.dynamicInteractionRadius = null;
+                    window.dynamicFriction = null;
+                    window.dynamicMaxSpeed = null;
+                    window.compassDirection = null;
                 };
 
 
@@ -277,9 +315,6 @@
                     ctx.fillRect(0, 0, width, height);
                     drawParticles();
                 };
-
-
-
 
 
                 // ─────────────────────────────────────────
