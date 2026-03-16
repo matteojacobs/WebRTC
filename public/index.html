@@ -8,6 +8,9 @@
 <body>
     <!-- qr-code div -->
     <div id="qr-code"></div>
+    <canvas id="canvas"></canvas>
+    <div id="hud"></div>
+    <div id="badge">particle life · step 4</div>
 
     <!-- Add socket.io client -->
     <script src="/socket.io/socket.io.js"></script>
@@ -32,6 +35,7 @@
 
             const init = () => {
                 initSocket();
+                initParticleLife();
             }
 
             const initSocket = async () => {
@@ -83,6 +87,226 @@
                 });
             };
 
+            const initParticleLife = () => {
+                // ─────────────────────────────────────────
+                //  CANVAS SETUP
+                // ─────────────────────────────────────────
+                const canvas = document.getElementById('canvas');
+                const ctx    = canvas.getContext('2d');
+
+                let width = 0, height = 0;
+
+                const resize = () => {
+                    width  = canvas.width  = window.innerWidth;
+                    height = canvas.height = window.innerHeight;
+                };
+
+                window.addEventListener('resize', resize);
+                resize();
+
+
+                // ─────────────────────────────────────────
+                //  PARTICLE GROUPS & COLORS
+                // ─────────────────────────────────────────
+                const colors = {
+                    red:    '#ff4444',
+                    green:  '#44ff88',
+                    blue:   '#4488ff',
+                    yellow: '#ffdd44',
+                    orange: '#ff8833',
+                    purple: '#cc44ff',
+                    cyan:   '#44ffee',
+                    pink:   '#ff44aa',
+                    lime:   '#aaff33',
+                    white:  '#ffffff',
+                };
+
+                const particleCount = 200;
+                let groups = {};
+
+                const createParticle = () => ({
+                    x:         Math.random() * width,
+                    y:         Math.random() * height,
+                    velocityX: 0,
+                    velocityY: 0,
+                });
+
+                const spawnGroups = () => {
+                    groups = {};
+                    for (const color in colors) {
+                    groups[color] = [];
+                    for (let i = 0; i < particleCount; i++) {
+                        groups[color].push(createParticle());
+                    }
+                    }
+                };
+
+                spawnGroups();
+
+
+                // ─────────────────────────────────────────
+                //  PHYSICS PARAMETERS
+                // ─────────────────────────────────────────
+                const interactionRadius   = 100;
+                const friction            = 0.65;
+                const maxSpeed            = 4;
+                const minRepulseDistance  = 10;
+
+
+                // ─────────────────────────────────────────
+                //  FORCE MATRIX
+                // ─────────────────────────────────────────
+                const colorKeys = Object.keys(colors);
+                let matrix = {};
+
+                const randomForce = () => (Math.random() * 2 - 1) - 0.3;
+
+                const randomizeMatrix = () => {
+                    matrix = {};
+                    for (const a of colorKeys) {
+                    matrix[a] = {};
+                    for (const b of colorKeys) {
+                        matrix[a][b] = randomForce();
+                    }
+                    }
+                };
+
+                randomizeMatrix();
+
+
+                // ─────────────────────────────────────────
+                //  CORE FORCE FUNCTION
+                // ─────────────────────────────────────────
+                const rule = (groupA, groupB, g, repulsionZone = 25) => {
+                    for (let i = 0; i < groupA.length; i++) {
+                    let forceX = 0;
+                    let forceY = 0;
+
+                    for (let j = 0; j < groupB.length; j++) {
+                        const distanceX = groupB[j].x - groupA[i].x;
+                        const distanceY = groupB[j].y - groupA[i].y;
+                        const distance  = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+
+                        if (distance === 0 || distance >= interactionRadius) continue;
+
+                        if (distance < repulsionZone) {
+                        const pushStrength = (repulsionZone - distance) / repulsionZone;
+                        forceX -= (distanceX / distance) * pushStrength * 2;
+                        forceY -= (distanceY / distance) * pushStrength * 2;
+                        continue;
+                        }
+
+                        if (distance < minRepulseDistance) {
+                        forceX -= (distanceX / distance);
+                        forceY -= (distanceY / distance);
+                        continue;
+                        }
+
+                        const force = g / distance;
+                        forceX += force * distanceX;
+                        forceY += force * distanceY;
+                    }
+
+                    groupA[i].velocityX = (groupA[i].velocityX + forceX) * friction;
+                    groupA[i].velocityY = (groupA[i].velocityY + forceY) * friction;
+
+                    const speed = Math.sqrt(
+                        groupA[i].velocityX * groupA[i].velocityX +
+                        groupA[i].velocityY * groupA[i].velocityY
+                    );
+                    if (speed > maxSpeed) {
+                        groupA[i].velocityX *= maxSpeed / speed;
+                        groupA[i].velocityY *= maxSpeed / speed;
+                    }
+
+                    groupA[i].x += groupA[i].velocityX;
+                    groupA[i].y += groupA[i].velocityY;
+
+                    if (groupA[i].x < 0)      { groupA[i].x = 0;      groupA[i].velocityX *= -3; }
+                    if (groupA[i].x > width)  { groupA[i].x = width;  groupA[i].velocityX *= -3; }
+                    if (groupA[i].y < 0)      { groupA[i].y = 0;      groupA[i].velocityY *= -3; }
+                    if (groupA[i].y > height) { groupA[i].y = height; groupA[i].velocityY *= -3; }
+                    }
+                };
+
+
+                // ─────────────────────────────────────────
+                //  SIMULATION STATE
+                // ─────────────────────────────────────────
+                let paused     = false;
+                let frameCount = 0;
+
+                const totalParticles = () => {
+                    let n = 0;
+                    for (const c in groups) n += groups[c].length;
+                    return n;
+                };
+
+
+                // ─────────────────────────────────────────
+                //  UPDATE
+                // ─────────────────────────────────────────
+                const update = () => {
+                    if (paused) return;
+                    for (const a of colorKeys) {
+                    for (const b of colorKeys) {
+                        rule(groups[a], groups[b], matrix[a][b]);
+                    }
+                    }
+                };
+
+
+                // ─────────────────────────────────────────
+                //  DRAW
+                // ─────────────────────────────────────────
+                const particleRadius = 7;
+
+                const drawParticles = () => {
+                    for (const color in groups) {
+                    ctx.fillStyle = colors[color];
+                    for (const p of groups[color]) {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, particleRadius, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    }
+                };
+
+                const draw = () => {
+                    ctx.fillStyle = '#080a0f';
+                    ctx.fillRect(0, 0, width, height);
+                    drawParticles();
+                };
+
+
+
+
+
+                // ─────────────────────────────────────────
+                //  MAIN LOOP
+                // ─────────────────────────────────────────
+                const loop = () => {
+                    update();
+                    draw();
+                    requestAnimationFrame(loop);
+                };
+
+                requestAnimationFrame(loop);
+
+
+                // ─────────────────────────────────────────
+                //  KEYBOARD CONTROLS
+                // ─────────────────────────────────────────
+                document.addEventListener('keydown', e => {
+                    switch (e.key.toLowerCase()) {
+                    case 'p': paused = !paused;           break;
+                    case 'r': spawnGroups(); randomizeMatrix(); frameCount = 0; break;
+                    case 'm': randomizeMatrix();          break;
+                    }
+                });
+                };
+
+                
             init();
         }
      </script>
