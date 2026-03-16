@@ -19,8 +19,10 @@
     <!-- QR-code logic -->
      <script>
         {
+            let peer
             let socket;
             let peerConnection;
+            let phoneData;
 
             const servers = {
                 iceServers: [{
@@ -52,9 +54,7 @@
                 socket.on('clients', updatePeerList);
             
                 socket.on('signal', async (myId, signal, peerId) => {
-                    console.log(`Received signal from ${peerId}`);
-                    console.log(signal);
-                    peer.signal(signal);
+                    if (peer) peer.signal(signal);
                 });
             }
 
@@ -63,16 +63,23 @@
                     const isMyOwnId = (clientId === socket.id);
                     if (clients.hasOwnProperty(clientId) && !isMyOwnId) {
                         const client = clients[clientId];
-                        console.log(client.id);
                         callPeer(client.id);
                     }
                 }
             };
 
             const callPeer = async (peerId) => {
-                peer = new SimplePeer({ initiator: true });
+                peer = new SimplePeer({ 
+                    initiator: true,
+                    config: servers
+                });
                 peer.on('signal', data => {
                     socket.emit('signal', peerId, data);
+                });
+
+                peer.on('data', (data) => {
+                    phoneData = JSON.parse(data);
+                    console.log(phoneData); 
                 });
             };
 

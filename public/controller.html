@@ -18,6 +18,7 @@
             let peer;
             let peerConnection;
             let permissionResults
+            let sensorInformation
 
             const servers = {
                 iceServers: [{
@@ -168,12 +169,15 @@
                 sensorData.compassOrientation = compassOrientation;
                 sensorData.battery = await batteryData();
 
-                const sensorInformation = {
+                sensorInformation = {
                     permissions: permissionResults,
                     sensors: sensorData
                 };
 
-                console.log(sensorInformation);
+                if (peer && peer.connected) {
+                    peer.send(JSON.stringify(sensorInformation));
+                }
+
                 }, 100);
 
                 
@@ -268,15 +272,20 @@
                 socket.on('signal', async (myId, signal, peerId) => {
                     // console.log(`Received signal from ${peerId}`);
                     // console.log(signal);
-                    if (!peer) {
-                        peer = new SimplePeer({ initiator: false });
+                    if (!peer || peer.destroyed) {
+                        peer = new SimplePeer({ 
+                            initiator: false,
+                            config: servers
+                         });
 
                         peer.on('signal', data => {
                             socket.emit('signal', peerId, data);
                         });
 
                         peer.on('connect', () => {
-                            // console.log('Peer connection established!');
+                            if (sensorInformation) {
+                                peer.send(JSON.stringify(sensorInformation));
+                            }
                         });
 
                         peer.on('error', err => {
