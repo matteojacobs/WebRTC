@@ -62,7 +62,7 @@
 
                         peer.on('data', (data) => {
                             phoneData = JSON.parse(data);
-                            console.log(phoneData)
+                            console.log(phoneData.sensors.gyroMagnitude)
                         });
 
                     }

@@ -20,8 +20,18 @@
             const computerId = new URLSearchParams(window.location.search).get('id');
             let socket;
             let peer;
-            let permissionResults
-            let sensorInformation
+            let permissionResults;
+            let sensorInformation;
+
+            // ── Shared sensor state (written by persistent listeners) ──────────────
+            const sensorState = {
+                vertical: 'N/A',
+                horizontal: 'N/A',
+                gyroMagnitude: 0,
+                compassOrientation: null,
+                batteryPercentage: 1,
+            };
+            
 
             const servers = {
                 iceServers: [{
@@ -39,8 +49,6 @@
                     } 
                 });
             }
-
-            
 
             const permissionRequests = async () => {
                 const permissionRequestResults = {
@@ -62,7 +70,6 @@
 
             const requestOrientation = async () => {
                 try {
-                    // iOS 13+ requires explicit permission
                     if (typeof DeviceOrientationEvent !== "undefined" &&
                         typeof DeviceOrientationEvent?.requestPermission === "function") {
                         
@@ -72,16 +79,32 @@
                         return "impossible";
                     }
 
-                    // Verify the device actually sends orientation data
                     const hasData = await new Promise((resolve) => {
                         const timeout = setTimeout(() => resolve(false), 500);
 
                         window.addEventListener("deviceorientation", (e) => {
                             clearTimeout(timeout);
-                            // Check that at least one axis has real data
                             resolve(e.alpha !== null || e.beta !== null || e.gamma !== null);
                         }, { once: true });
                     });
+
+                    // ── Register the persistent orientation + compass listener ─────────
+                    if (hasData) {
+                        window.addEventListener('deviceorientation', (event) => {
+                            sensorState.vertical   = event.beta  !== null ? event.beta.toFixed(1)  : 'N/A';
+                            sensorState.horizontal = event.gamma !== null ? event.gamma.toFixed(1) : 'N/A';
+
+                            if (event.webkitCompassHeading !== undefined) {
+                                const heading = event.webkitCompassHeading;
+                                const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                                sensorState.compassOrientation = directions[Math.round(heading / 45) % 8];
+                            } else if (event.absolute && event.alpha !== null) {
+                                const heading = (360 - event.alpha) % 360;
+                                const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                                sensorState.compassOrientation = directions[Math.round(heading / 45) % 8];
+                            }
+                        });
+                    }
 
                     return hasData ? "granted" : "impossible";
 
@@ -92,7 +115,6 @@
 
             const requestGyro = async () => {
                 try {
-                    // iOS 13+ requires explicit permission
                     if (typeof DeviceMotionEvent !== "undefined" &&
                         typeof DeviceMotionEvent.requestPermission === "function") {
                         
@@ -102,15 +124,24 @@
                         return "impossible";
                     }
 
-                    // Verify the device actually sends motion data
                     const hasData = await new Promise((resolve) => {
                         const timeout = setTimeout(() => resolve(false), 500);
 
                         window.addEventListener("devicemotion", (e) => {
                             clearTimeout(timeout);
-                            resolve(e.rotationRate?.alpha !== null || e.rotationRate?.beta  !== null || e.rotationRate?.gamma !== null);
+                            resolve(e.rotationRate?.alpha !== null || e.rotationRate?.beta !== null || e.rotationRate?.gamma !== null);
                         }, { once: true });
                     });
+
+                    // ── Register the persistent gyro listener ─────────────────────────
+                    if (hasData) {
+                        window.addEventListener('devicemotion', (event) => {
+                            const { alpha, beta, gamma } = event.rotationRate ?? {};
+                            if (alpha == null) return;
+                            const raw = Math.sqrt(alpha ** 2 + beta ** 2 + gamma ** 2);
+                            sensorState.gyroMagnitude = Math.min(Math.round((raw / 50) * 100), 100);
+                        });
+                    }
 
                     return hasData ? "granted" : "impossible";
 
@@ -138,137 +169,64 @@
                 } catch (error) {
                     return "denied";
                 }
-            }
+            };
 
             const requestBattery = async () => {
                 if (!navigator.getBattery) {
                     return "impossible";
-                } 
-                else {
+                } else {
+                    // ── Register the persistent battery listener here ─────────────────
+                    const battery = await navigator.getBattery();
+                    sensorState.batteryPercentage = Math.round(battery.level * 100);
+                    battery.addEventListener('levelchange', () => {
+                        sensorState.batteryPercentage = Math.round(battery.level * 100);
+                    });
                     return "granted";
                 }
-            }
+            };
 
-            const dataCollection = async () => {
-                setInterval(async () => {
+            // ── dataCollection: now fully synchronous, just reads sensorState ──────
+            const dataCollection = () => {
+                setInterval(() => {
                     const sensorData = {
-                    tiltY: null,
-                    tiltX: null,
-                    gyroMagnitude: null,
-                    bassEnergy: null,
-                    compassOrientation: null,
-                    battery: null
+                        tiltY:              sensorState.horizontal,
+                        tiltX:              sensorState.vertical,
+                        gyroMagnitude:      sensorState.gyroMagnitude,
+                        bassEnergy:         microphoneData(),
+                        compassOrientation: sensorState.compassOrientation,
+                        battery:            sensorState.batteryPercentage,
+                    };
 
-                }
+                    sensorInformation = {
+                        permissions: permissionResults,
+                        sensors: sensorData
+                    };
 
-                const { vertical, horizontal } = await orientationData();
-                const { mappedGyroMagnitude } = await gyroData();
-                const { compassOrientation } = await compassData();
-
-                sensorData.tiltY = horizontal;
-                sensorData.tiltX = vertical;
-                sensorData.gyroMagnitude = mappedGyroMagnitude;
-                sensorData.bassEnergy = microphoneData();
-                sensorData.compassOrientation = compassOrientation;
-                sensorData.battery = await batteryData();
-
-                sensorInformation = {
-                    permissions: permissionResults,
-                    sensors: sensorData
-                };
-
-                if (peer && peer.connected) {
-                    peer.send(JSON.stringify(sensorInformation));
-                }
+                    if (peer && peer.connected) {
+                        peer.send(JSON.stringify(sensorInformation));
+                    }
 
                 }, 100);
-
-                
-            }
-
-            
-
-            const orientationData = () => {
-                return new Promise((resolve) => {
-                    window.addEventListener('deviceorientation', (event) => {
-                    const vertical = event.beta !== null ? event.beta.toFixed(1) : 'N/A';    // front/back tilt (-180 to 180)
-                    const horizontal = event.gamma !== null ? event.gamma.toFixed(1) : 'N/A'; // left/right tilt (-90 to 90)
-
-                    resolve ({ vertical, horizontal });
-                }, {once: true});
-                
-                });
-            }
-
-            const gyroData = () => {
-                return new Promise((resolve) => {
-                    window.addEventListener('devicemotion', (event) => {
-                    const rotationRate = event.rotationRate;
-                    const gyroMagnitude = Math.sqrt(rotationRate.alpha**2 + rotationRate.beta**2 + rotationRate.gamma**2)
-                    const mappedGyroMagnitude = Math.min(Math.round((gyroMagnitude / 500) * 100), 100);
-                    
-                    resolve({ mappedGyroMagnitude });
-                }, {once: true});
-               
-                });
-            }
+            };   
 
             const microphoneData = () => {
-                analyser.fftSize = 256;
-
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
                 analyser.getByteFrequencyData(dataArray);
 
                 const bassRange = Math.floor(dataArray.length * 0.1);
                 const bassSlice = dataArray.slice(0, bassRange);
-                const bassEnergy = Math.round((bassSlice.reduce((sum, v) => sum + v, 0) / bassRange / 255) * 99) + 1;
+                const bassAvg = bassSlice.reduce((sum, v) => sum + v, 0) / bassRange;
 
-                return bassEnergy
-            }
-            
-            const compassData = () => {
-                return new Promise((resolve) => {
-                    window.addEventListener('deviceorientation', (event) => {
-                    let heading = null
+                const dynamicMax = Math.max(...dataArray) || 1;
+                const bassEnergy = Math.round((bassAvg / dynamicMax) * 99) + 1;
 
-                    if (event.webkitCompassHeading !== undefined) {
-                            heading = event.webkitCompassHeading;
-                        }
-
-                        else if (event.absolute && event.alpha !== null) {
-                            heading = (360 - event.alpha) % 360;
-                        }
-
-                    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-                    const compassOrientation = directions[Math.round(heading / 45) % 8];
-
-                    resolve ({ compassOrientation});
-                }, {once: true});
-                
-                });
-
-            }
-
-            const batteryData = async () => {
-                if (typeof navigator.getBattery !== "undefined") {
-                    const battery = await navigator.getBattery();
-                    const batteryPercentage = Math.round(battery.level * 100);
-    
-                    battery.addEventListener("levelchange", () =>{
-                        batteryPercentage = Math.round(battery.level * 100);
-                    })
-    
-                    return batteryPercentage
-                }
-                return 1;
-
-            }
+                return Math.min(bassEnergy, 100);
+            };
 
             const initSocket = () => {
                 socket = io.connect("/");
 
                 socket.on('connect', () => {
-                    // console.log(`Connected: ${socket.id}`);
                     peer = new SimplePeer({
                         initiator: true,
                         config: servers
@@ -289,10 +247,10 @@
                 socket.on('signal', async (myId, signal, peerId) => {
                     if (peer && !peer.destroyed) {
                         peer.signal(signal);
-                    }
+                    };
 
                 });            
-            }
+            };
 
             init();
         }

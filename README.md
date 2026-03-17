@@ -257,3 +257,88 @@ This was built step-by-step with the assistance of **Claude (Anthropic)** over a
 - **Bounce vs wrap** — a deliberate design choice requiring understanding of the velocity system
 - **Repulsion zone** — my own addition after noticing particles collapsing into single points
 - **Repulsion bias** in `randomForce()` — shifting the distribution so random universes tend toward repulsion, producing more open formations
+
+---
+
+### Step 15 — Debugging Frozen Sensor Values
+
+#### The Problem
+
+After the sensor pipeline was working, I noticed that `gyroMagnitude` (and silently, `compassOrientation` and the tilt values) would correctly capture a value on first load but then **never update** — staying frozen at that initial reading for the entire session, even when physically moving the phone.
+
+The symptom was clear: the first WebRTC packet sent to the desktop contained real sensor data, but every packet after that was identical.
+
+#### Diagnosing the Root Cause
+
+Before asking AI, I identified the likely culprit myself: all three sensor functions — `gyroData()`, `orientationData()`, and `compassData()` — used the same pattern:
+
+```javascript
+const gyroData = () => {
+    return new Promise((resolve) => {
+        window.addEventListener('devicemotion', (event) => {
+            // ... compute value ...
+            resolve({ mappedGyroMagnitude });
+        }, { once: true });
+    });
+};
+```
+
+Each call to `gyroData()` inside `setInterval` registers a new `{once: true}` listener, waits for the next `devicemotion` fire, resolves the Promise, then removes itself. My hypothesis was that this was causing a race condition or listener exhaustion.
+
+I wrote a detailed prompt for AI explaining the pattern, my hypothesis, and asking for a precise technical explanation of the failure, the correct architectural fix, and a rewritten version of all three affected functions.
+
+#### The AI Explanation
+
+AI confirmed the hypothesis but clarified the exact failure mode. `devicemotion` fires at ~60Hz on iOS Safari. The `setInterval` fires every 100ms. This timing mismatch means the browser fires the event ~6 times between each interval tick — so on its own the listener usually catches the next event fine.
+
+The deeper problem is iOS-specific: if the browser throttles the event stream (background tab, permission edge case, or the stream being momentarily quiet), the `{once: true}` listener registers but the event never fires. The `await gyroData()` call hangs indefinitely. Since `setInterval` runs on wall-clock time regardless of whether the previous async callback has finished, **unresolved Promises accumulate on every tick** — each holding a registered-but-never-fired listener. The value freezes because the assignment `sensorData.gyroMagnitude = mappedGyroMagnitude` simply never runs again. The same failure applies identically to `orientationData()` and `compassData()`.
+
+A secondary bug was also identified: `batteryData()` called `getBattery()` and registered a new `levelchange` listener on every interval tick, meaning after 100 seconds there were 1,000 dangling listeners.
+
+#### The Fix
+
+The core architectural change: **sensors are push-based, not poll-based**. The correct pattern is a persistent listener that continuously writes to a shared state object, and a separate polling loop that reads from it synchronously.
+
+The persistent listeners are registered once, immediately after permissions are granted, inside `requestGyro()` and `requestOrientation()`:
+
+```javascript
+// Inside requestGyro(), after permission is confirmed:
+window.addEventListener('devicemotion', (event) => {
+    const { alpha, beta, gamma } = event.rotationRate ?? {};
+    if (alpha == null) return;
+    const raw = Math.sqrt(alpha ** 2 + beta ** 2 + gamma ** 2);
+    sensorState.gyroMagnitude = Math.min(Math.round((raw / 50) * 100), 100);
+});
+```
+
+The `dataCollection()` loop becomes fully synchronous — no `async`, no `await`, just a direct read from `sensorState`:
+
+```javascript
+const dataCollection = () => {
+    setInterval(() => {
+        const sensorData = {
+            tiltY:              sensorState.horizontal,
+            tiltX:              sensorState.vertical,
+            gyroMagnitude:      sensorState.gyroMagnitude,
+            bassEnergy:         microphoneData(),
+            compassOrientation: sensorState.compassOrientation,
+            battery:            sensorState.batteryPercentage,
+        };
+        if (peer && peer.connected) {
+            peer.send(JSON.stringify({ permissions: permissionResults, sensors: sensorData }));
+        }
+    }, 100);
+};
+```
+
+The `batteryData()`, `orientationData()`, `gyroData()`, and `compassData()` functions were deleted entirely. Orientation and compass were merged into a single persistent `deviceorientation` listener (since they read from the same event). Battery initialisation was moved into `requestBattery()`.
+
+#### How AI Helped
+
+I had already identified the pattern as the problem before asking. AI's main contribution was explaining **why** the freeze happens specifically on iOS — the interaction between Promise-based async, `setInterval`'s wall-clock firing, and the browser's event stream throttling. It also caught the battery memory leak, which I hadn't noticed, and explained the principle clearly: sensors push, pollers read — never mix the two.
+
+#### My Modifications to the AI Output
+
+AI's suggested fix kept `gyroData()`, `orientationData()`, and `compassData()` as separate standalone functions. I removed them entirely and instead folded the persistent listener registration directly into the existing `requestGyro()` and `requestOrientation()` permission functions — keeping the structure consistent with the rest of the file and avoiding new top-level functions that would need to be called separately.
+
+---
