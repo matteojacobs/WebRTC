@@ -1,28 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phone</title>
-</head>
-<body>
-    <h1>You connected phone and computer</h1>
-    <button id="btn">Request Permission</button>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js" integrity="sha512-0f7Ahsuvr+/P2btTY4mZIw9Vl23lS6LY/Y7amdkmUg2dqsUF+cTe4QjWvj/NIBHJoGksOiqndKQuI9yzn2hB0g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>    
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Phone</title>
+    </head>
+    <body>
+        <h1>You connected phone and computer</h1>
+        <button id="btn">Request Permission</button>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"
+            integrity="sha512-0f7Ahsuvr+/P2btTY4mZIw9Vl23lS6LY/Y7amdkmUg2dqsUF+cTe4QjWvj/NIBHJoGksOiqndKQuI9yzn2hB0g=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
         {
+            const computerId = new URLSearchParams(window.location.search).get('id');
             let socket;
             let peer;
-            let peerConnection;
             let permissionResults
             let sensorInformation
 
             const servers = {
                 iceServers: [{
-                    urls: 'stun:192.168.1.45:443'
+                    urls: 'stun:stun.l.google.com:19302'
                 }]
             };
 
@@ -247,14 +250,17 @@
             }
 
             const batteryData = async () => {
-                const battery = await navigator.getBattery();
-                const batteryPercentage = Math.round(battery.level * 100);
-
-                battery.addEventListener("levelchange", () =>{
-                    batteryPercentage = Math.round(battery.level * 100);
-                })
-
-                return batteryPercentage
+                if (typeof navigator.getBattery !== "undefined") {
+                    const battery = await navigator.getBattery();
+                    const batteryPercentage = Math.round(battery.level * 100);
+    
+                    battery.addEventListener("levelchange", () =>{
+                        batteryPercentage = Math.round(battery.level * 100);
+                    })
+    
+                    return batteryPercentage
+                }
+                return 1;
 
             }
 
@@ -263,42 +269,33 @@
 
                 socket.on('connect', () => {
                     // console.log(`Connected: ${socket.id}`);
-                });
+                    peer = new SimplePeer({
+                        initiator: true,
+                        config: servers
+                    });
 
-                socket.on("clients", (clients) => {
-                    // console.log("Current clients:", clients);
+                    peer.on('signal', data => {
+                        socket.emit('signal', computerId, data);
+                    });
+
+                    peer.on('connect', () => {
+                        if (sensorInformation) {
+                            peer.send(JSON.stringify(sensorInformation));
+                        }
+                    });
+
                 });
 
                 socket.on('signal', async (myId, signal, peerId) => {
-                    // console.log(`Received signal from ${peerId}`);
-                    // console.log(signal);
-                    if (!peer || peer.destroyed) {
-                        peer = new SimplePeer({ 
-                            initiator: false,
-                            config: servers
-                         });
-
-                        peer.on('signal', data => {
-                            socket.emit('signal', peerId, data);
-                        });
-
-                        peer.on('connect', () => {
-                            if (sensorInformation) {
-                                peer.send(JSON.stringify(sensorInformation));
-                            }
-                        });
-
-                        peer.on('error', err => {
-                            // console.error('Peer error:', err);
-                        });
+                    if (peer && !peer.destroyed) {
+                        peer.signal(signal);
                     }
 
-                    peer.signal(signal);
                 });            
             }
 
             init();
         }
     </script>
-</body>
+    </body>
 </html>

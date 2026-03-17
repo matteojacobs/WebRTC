@@ -22,14 +22,13 @@
     <!-- QR-code logic -->
      <script>
         {
-            let peer
+            let peer;
             let socket;
-            let peerConnection;
             let phoneData = null;
 
             const servers = {
                 iceServers: [{
-                    urls: 'stun:192.168.1.45:443'
+                    urls: 'stun:stun.l.google.com:19302'
                 }]
             };
 
@@ -41,44 +40,34 @@
             const initSocket = async () => {
                 socket = io.connect("/");
                 socket.on("connect", () => {
-                    const url = `${new URL(`/controller.html?id=${socket.id}`,window.location)}`;
-                    
+                    const url = `${new URL(`/controller.html?id=${socket.id}`,window.location)}`;   
                     const typeNumber = 4;
                     const errorCorrectionLevel = 'L';
                     const qr = qrcode(typeNumber, errorCorrectionLevel);
                     qr.addData(url);
                     qr.make();
                     document.getElementById('qr-code').innerHTML = qr.createImgTag(10);
-                })
-
-                socket.on('clients', updatePeerList);
-            
-                socket.on('signal', async (myId, signal, peerId) => {
-                    if (peer) peer.signal(signal);
                 });
-            }
 
-            const updatePeerList = (clients) => {
-                for (const clientId in clients) {
-                    if (clients.hasOwnProperty(clientId) && clientId !== socket.id) {
-                        const client = clients[clientId];
-                        callPeer(client.id);
+                socket.on('signal', (myId, signal, peerId) => {
+                    if (!peer || peer.destroyed) {
+                        peer = new SimplePeer({
+                            initiator: false,
+                            config: servers
+                        });
+
+                        peer.on('signal', data => {
+                            socket.emit('signal', peerId, data);
+                        });
+
+                        peer.on('data', (data) => {
+                            phoneData = JSON.parse(data);
+                            console.log(phoneData)
+                        });
+
                     }
-                }
-            };
 
-            const callPeer = (peerId) => {
-                peer = new SimplePeer({ 
-                    initiator: true,
-                    config: servers
-                });
-                peer.on('signal', data => {
-                    socket.emit('signal', peerId, data);
-                });
-
-                peer.on('data', (data) => {
-                    phoneData = JSON.parse(data);
-                    console.log(phoneData); 
+                    peer.signal(signal);
                 });
             };
 
@@ -175,22 +164,18 @@
                     const permissions = phoneData.permissions;
                     const sensors = phoneData.sensors;
 
-                    // Rule 1: Gyro controls tilt-based forces
                     if (permissions.Gyro === 'granted') {
 
                     }
 
-                    // Rule 2: Microphone controls energy/bass-based pulsing
                     if (permissions.Microphone === 'granted') {
                 
                     }
 
-                    // Rule 3: Battery affects overall system energy/friction
                     if (permissions.Battery === 'granted') {
                       
                     }
 
-                    // Rule 4: Orientation affects particle direction preference
                     if (permissions.Orientation === 'granted') {
                        
                     }
