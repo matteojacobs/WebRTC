@@ -224,6 +224,20 @@
                 return Math.min(bassEnergy, 1000);
             };
 
+            const requestWakeLock = async () => {
+                try {
+                    await navigator.wakeLock.request('screen');
+                } catch (e) {
+                    console.log('Wake lock failed:', e);
+                }
+            };
+
+            requestWakeLock();
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') requestWakeLock();
+            });
+
             const initSocket = () => {
                 socket = io.connect("/");
 
