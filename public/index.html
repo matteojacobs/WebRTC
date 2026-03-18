@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebRTC</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #080a0f; overflow: hidden; }
+        canvas { display: block; }
+    </style>
 </head>
 <body>
     <!-- qr-code div -->
@@ -19,8 +24,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js" integrity="sha512-0f7Ahsuvr+/P2btTY4mZIw9Vl23lS6LY/Y7amdkmUg2dqsUF+cTe4QjWvj/NIBHJoGksOiqndKQuI9yzn2hB0g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     
-    <!-- QR-code logic -->
-     <script>
+    <script>
         {
             let peer;
             let socket;
@@ -40,7 +44,7 @@
             const initSocket = async () => {
                 socket = io.connect("/");
                 socket.on("connect", () => {
-                    const url = `${new URL(`/controller.html?id=${socket.id}`,window.location)}`;   
+                    const url = `${new URL(`/controller.html?id=${socket.id}`, window.location)}`;
                     const typeNumber = 4;
                     const errorCorrectionLevel = 'L';
                     const qr = qrcode(typeNumber, errorCorrectionLevel);
@@ -62,9 +66,8 @@
 
                         peer.on('data', (data) => {
                             phoneData = JSON.parse(data);
-                            console.log(phoneData.sensors.gyroMagnitude)
+                            console.log(phoneData);
                         });
-
                     }
 
                     peer.signal(signal);
@@ -78,7 +81,8 @@
                 const canvas = document.getElementById('canvas');
                 const ctx    = canvas.getContext('2d');
 
-                let width = 0, height = 0;
+                let width  = 0;
+                let height = 0;
 
                 const resize = () => {
                     width  = canvas.width  = window.innerWidth;
@@ -90,7 +94,25 @@
 
 
                 // ─────────────────────────────────────────
-                //  PARTICLE GROUPS & COLORS
+                //  PARAMETERS
+                // ─────────────────────────────────────────
+                const colorsAmount   = 6;
+                const particleAmount = 1000;
+                const particleRadius = 3;
+
+                const maxDistance   = () => Math.min(width, height) * 0.2;
+                const repulsionZone = 0.3;
+
+                const deltaT      = 0.05;
+                const frictionHL  = 0.3;
+                const forceScale  = 8;
+                const maxSpeed    = 10;
+
+                const frictionFactor = Math.pow(0.5, deltaT / frictionHL);
+
+
+                // ─────────────────────────────────────────
+                //  COLORS
                 // ─────────────────────────────────────────
                 const colors = {
                     red:    '#ff4444',
@@ -99,60 +121,67 @@
                     yellow: '#ffdd44',
                     orange: '#ff8833',
                     purple: '#cc44ff',
-                    cyan:   '#44ffee',
-                    pink:   '#ff44aa',
-                    lime:   '#aaff33',
-                    white:  '#ffffff',
                 };
 
                 const colorKeys = Object.keys(colors);
-                const particleCount = 200;
-                let groups = {};
-
-                const createParticle = () => ({
-                    x: Math.random() * width,
-                    y: Math.random() * height,
-                    velocityX: 0,
-                    velocityY: 0,
-                });
-
-                const spawnGroups = () => {
-                groups = {};
-                for (const color in colors) {
-                    groups[color] = Array.from({ length: particleCount }, createParticle);
-                }
-            };
-
-                spawnGroups();
 
 
                 // ─────────────────────────────────────────
-                //  PHYSICS PARAMETERS
+                //  FORCE CURVE
                 // ─────────────────────────────────────────
-                const interactionRadius   = 100;
-                const friction            = 0.65;
-                const maxSpeed            = 4;
-                const minRepulseDistance  = 10;
+                const force = (r, a) => {
+                    if (r < repulsionZone) {
+                        return (r / repulsionZone) - 1;
+                    } else if (r < 1) {
+                        const mid = (repulsionZone + 1) / 2;
+                        return a * (1 - Math.abs(r - mid) / (1 - mid));
+                    }
+                    return 0;
+                };
 
 
                 // ─────────────────────────────────────────
-                //  FORCE MATRIX
-                // ─────────────────────────────────────────                
-                let matrix = {};
+                //  ATTRACTION MATRIX
+                // ─────────────────────────────────────────
+                let attractionMatrix = [];
 
-                const randomForce = () => (Math.random() * 2 - 1) - 0.3;
-
-                const randomizeMatrix = () => {
-                    matrix = {};
-                    for (const a of colorKeys) {
-                        matrix[a] = {};
-                        for (const b of colorKeys) {
-                            matrix[a][b] = randomForce();
+                const makeRandomMatrix = () => {
+                    attractionMatrix = [];
+                    for (let i = 0; i < colorsAmount; i++) {
+                        const cols = [];
+                        for (let j = 0; j < colorsAmount; j++) {
+                            let v = Math.random() * 2 - 1;
+                            if (Math.abs(v) < 0.15) v = (v >= 0 ? 1 : -1) * 0.5;
+                            cols.push(v);
                         }
+                        attractionMatrix.push(cols);
                     }
                 };
 
-                randomizeMatrix();
+                makeRandomMatrix();
+
+
+                // ─────────────────────────────────────────
+                //  PARTICLES
+                // ─────────────────────────────────────────
+                let particles = [];
+
+                const createParticle = (index) => ({
+                    positionX:  Math.random() * width,
+                    positionY:  Math.random() * height,
+                    velocityX:  0,
+                    velocityY:  0,
+                    color:      colorKeys[index % colorsAmount],
+                    colorIndex: index % colorsAmount,
+                });
+
+                const spawnParticles = () => {
+                    particles = [];
+                    for (let i = 0; i < particleAmount; i++) particles.push(createParticle(i));
+                };
+
+                spawnParticles();
+
 
                 // ─────────────────────────────────────────
                 //  PHONE DATA RULESET
@@ -169,129 +198,84 @@
                     }
 
                     if (permissions.Microphone === 'granted') {
-                
+
                     }
 
                     if (permissions.Battery === 'granted') {
-                      
+
                     }
 
                     if (permissions.Orientation === 'granted') {
-                       
-                    }
-                };
 
-                // ─────────────────────────────────────────
-                //  CORE FORCE FUNCTION
-                // ─────────────────────────────────────────
-                const rule = (groupA, groupB, g, repulsionZone = 25) => {
-                    for (let i = 0; i < groupA.length; i++) {
-                    let forceX = 0;
-                    let forceY = 0;
-
-                    // Apply compass direction if available
-                    if (window.compassDirection) {
-                        forceX += window.compassDirection.x * 0.1;
-                        forceY += window.compassDirection.y * 0.1;
-                    }
-
-                    for (let j = 0; j < groupB.length; j++) {
-                        const distanceX = groupB[j].x - groupA[i].x;
-                        const distanceY = groupB[j].y - groupA[i].y;
-                        const distance  = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-
-                        if (distance === 0 || distance >= interactionRadius) continue;
-
-                        if (distance < repulsionZone) {
-                        const pushStrength = (repulsionZone - distance) / repulsionZone;
-                        forceX -= (distanceX / distance) * pushStrength * 2;
-                        forceY -= (distanceY / distance) * pushStrength * 2;
-                        continue;
-                        }
-
-                        if (distance < minRepulseDistance) {
-                        forceX -= (distanceX / distance);
-                        forceY -= (distanceY / distance);
-                        continue;
-                        }
-
-                        const force = g / distance;
-                        forceX += force * distanceX;
-                        forceY += force * distanceY;
-                    }
-
-                    groupA[i].velocityX = (groupA[i].velocityX + forceX) * friction;
-                    groupA[i].velocityY = (groupA[i].velocityY + forceY) * friction;
-
-                    const speed = Math.sqrt(
-                        groupA[i].velocityX * groupA[i].velocityX +
-                        groupA[i].velocityY * groupA[i].velocityY
-                    );
-                    if (speed > maxSpeed) {
-                        groupA[i].velocityX *= maxSpeed / speed;
-                        groupA[i].velocityY *= maxSpeed / speed;
-                    }
-
-                    groupA[i].x += groupA[i].velocityX;
-                    groupA[i].y += groupA[i].velocityY;
-
-                    if (groupA[i].x < 0)      { groupA[i].x = 0;      groupA[i].velocityX *= -3; }
-                    if (groupA[i].x > width)  { groupA[i].x = width;  groupA[i].velocityX *= -3; }
-                    if (groupA[i].y < 0)      { groupA[i].y = 0;      groupA[i].velocityY *= -3; }
-                    if (groupA[i].y > height) { groupA[i].y = height; groupA[i].velocityY *= -3; }
                     }
                 };
 
 
                 // ─────────────────────────────────────────
-                //  SIMULATION STATE
+                //  PHYSICS UPDATE
                 // ─────────────────────────────────────────
-                let paused     = false;
-                let frameCount = 0;
-
-                const totalParticles = () => {
-                    let n = 0;
-                    for (const c in groups) n += groups[c].length;
-                    return n;
-                };
-
-
-                // ─────────────────────────────────────────
-                //  UPDATE
-                // ─────────────────────────────────────────
-                const update = () => {
-                    if (paused) return;
-                    
-                    // Apply phone data rules to modify the force matrix
+                const updateParticles = () => {
+                    // Apply phone data rules to modify the attraction matrix
                     applyPhoneDataRules();
-                    
-                    for (const a of colorKeys) {
-                    for (const b of colorKeys) {
-                        rule(groups[a], groups[b], matrix[a][b]);
+
+                    const md = maxDistance();
+
+                    for (let i = 0; i < particles.length; i++) {
+                        let fx = 0, fy = 0;
+                        const pi = particles[i];
+
+                        for (let j = 0; j < particles.length; j++) {
+                            if (i === j) continue;
+                            const pj = particles[j];
+
+                            let dx = pj.positionX - pi.positionX;
+                            let dy = pj.positionY - pi.positionY;
+
+                            // Wrap-around distance
+                            if (dx >  width  * 0.5) dx -= width;
+                            if (dx < -width  * 0.5) dx += width;
+                            if (dy >  height * 0.5) dy -= height;
+                            if (dy < -height * 0.5) dy += height;
+
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            if (dist === 0 || dist > md) continue;
+
+                            const r = dist / md;
+                            const f = force(r, attractionMatrix[pi.colorIndex][pj.colorIndex]);
+
+                            fx += (dx / dist) * f;
+                            fy += (dy / dist) * f;
+                        }
+
+                        pi.velocityX = pi.velocityX * frictionFactor + fx * forceScale * deltaT;
+                        pi.velocityY = pi.velocityY * frictionFactor + fy * forceScale * deltaT;
+
+                        // Clamp to maxSpeed
+                        const speed = Math.sqrt(pi.velocityX * pi.velocityX + pi.velocityY * pi.velocityY);
+                        if (speed > maxSpeed) {
+                            const scale = maxSpeed / speed;
+                            pi.velocityX *= scale;
+                            pi.velocityY *= scale;
+                        }
                     }
+
+                    // Move particles with wrap-around
+                    for (const p of particles) {
+                        p.positionX = ((p.positionX + p.velocityX) % width  + width)  % width;
+                        p.positionY = ((p.positionY + p.velocityY) % height + height) % height;
                     }
-                    
-                    // Reset dynamic values each frame
-                    window.dynamicInteractionRadius = null;
-                    window.dynamicFriction = null;
-                    window.dynamicMaxSpeed = null;
-                    window.compassDirection = null;
                 };
 
 
                 // ─────────────────────────────────────────
                 //  DRAW
                 // ─────────────────────────────────────────
-                const particleRadius = 7;
-
                 const drawParticles = () => {
-                    for (const color in groups) {
-                    ctx.fillStyle = colors[color];
-                    for (const p of groups[color]) {
+                    for (const p of particles) {
+                        ctx.fillStyle = colors[p.color];
                         ctx.beginPath();
-                        ctx.arc(p.x, p.y, particleRadius, 0, Math.PI * 2);
+                        ctx.arc(p.positionX, p.positionY, particleRadius, 0, Math.PI * 2);
                         ctx.fill();
-                    }
                     }
                 };
 
@@ -305,9 +289,13 @@
                 // ─────────────────────────────────────────
                 //  MAIN LOOP
                 // ─────────────────────────────────────────
+                let paused = false;
+
                 const loop = () => {
-                    update();
-                    draw();
+                    if (!paused) {
+                        updateParticles();
+                        draw();
+                    }
                     requestAnimationFrame(loop);
                 };
 
@@ -319,18 +307,15 @@
                 // ─────────────────────────────────────────
                 document.addEventListener('keydown', e => {
                     switch (e.key.toLowerCase()) {
-                    case 'p': paused = !paused;           break;
-                    case 'r': spawnGroups(); randomizeMatrix(); frameCount = 0; break;
-                    case 'm': randomizeMatrix();          break;
+                        case 'p': paused = !paused;                          break;
+                        case 'r': spawnParticles(); makeRandomMatrix();      break;
+                        case 'm': makeRandomMatrix();                        break;
                     }
                 });
-                };
+            };
 
-                
             init();
         }
-     </script>
-
-  
+    </script>
 </body>
 </html>

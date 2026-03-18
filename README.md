@@ -307,7 +307,7 @@ window.addEventListener('devicemotion', (event) => {
     const { alpha, beta, gamma } = event.rotationRate ?? {};
     if (alpha == null) return;
     const raw = Math.sqrt(alpha ** 2 + beta ** 2 + gamma ** 2);
-    sensorState.gyroMagnitude = Math.min(Math.round((raw / 50) * 100), 100);
+    sensorState.gyroMagnitude = Math.min(Math.round((raw / 500) * 100), 100);
 });
 ```
 
