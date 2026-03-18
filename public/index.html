@@ -17,11 +17,8 @@
     <div id="hud"></div>
     <div id="badge">particle life · step 4</div>
 
-    <!-- Add socket.io client -->
     <script src="/socket.io/socket.io.js"></script>
-    <!-- Qr-code generator -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==" crossorigin="anonymous"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js" integrity="sha512-0f7Ahsuvr+/P2btTY4mZIw9Vl23lS6LY/Y7amdkmUg2dqsUF+cTe4QjWvj/NIBHJoGksOiqndKQuI9yzn2hB0g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     
     <script>
@@ -66,7 +63,7 @@
 
                         peer.on('data', (data) => {
                             phoneData = JSON.parse(data);
-                            console.log(phoneData);
+                            console.log(phoneData.sensors.bassEnergy);
                         });
                     }
 
@@ -100,7 +97,7 @@
                 const particleAmount = 1000;
                 const particleRadius = 3;
 
-                const maxDistance   = () => Math.min(width, height) * 0.2;
+                const maxDistance   = Math.min(width, height) * 0.1;
                 const repulsionZone = 0.3;
 
                 const deltaT      = 0.05;
@@ -143,10 +140,12 @@
                 // ─────────────────────────────────────────
                 //  ATTRACTION MATRIX
                 // ─────────────────────────────────────────
+
+                let baseMatrix = [];
                 let attractionMatrix = [];
 
                 const makeRandomMatrix = () => {
-                    attractionMatrix = [];
+                    baseMatrix = [];
                     for (let i = 0; i < colorsAmount; i++) {
                         const cols = [];
                         for (let j = 0; j < colorsAmount; j++) {
@@ -154,8 +153,9 @@
                             if (Math.abs(v) < 0.15) v = (v >= 0 ? 1 : -1) * 0.5;
                             cols.push(v);
                         }
-                        attractionMatrix.push(cols);
+                        baseMatrix.push(cols);
                     }
+                    attractionMatrix = baseMatrix.map(row => [...row]);
                 };
 
                 makeRandomMatrix();
@@ -198,7 +198,15 @@
                     }
 
                     if (permissions.Microphone === 'granted') {
-
+                        const shift = (sensors.bassEnergy / 100);
+                        for (let i = 0; i < colorsAmount; i++) {
+                            for (let j = 0; j < colorsAmount; j++) {
+                                attractionMatrix[i][j] = Math.max(-1, baseMatrix[i][j] - shift);
+                            }
+                        }
+                        console.log(shift)
+                    } else {
+                        attractionMatrix = baseMatrix.map(row => [...row]);
                     }
 
                     if (permissions.Battery === 'granted') {
@@ -218,8 +226,6 @@
                     // Apply phone data rules to modify the attraction matrix
                     applyPhoneDataRules();
 
-                    const md = maxDistance();
-
                     for (let i = 0; i < particles.length; i++) {
                         let fx = 0, fy = 0;
                         const pi = particles[i];
@@ -238,9 +244,9 @@
                             if (dy < -height * 0.5) dy += height;
 
                             const dist = Math.sqrt(dx * dx + dy * dy);
-                            if (dist === 0 || dist > md) continue;
+                            if (dist === 0 || dist > maxDistance) continue;
 
-                            const r = dist / md;
+                            const r = dist / maxDistance;
                             const f = force(r, attractionMatrix[pi.colorIndex][pj.colorIndex]);
 
                             fx += (dx / dist) * f;

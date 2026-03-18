@@ -212,6 +212,7 @@
             const microphoneData = () => {
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
                 analyser.getByteFrequencyData(dataArray);
+                analyser.smoothingTimeConstant = 0.3;
 
                 const bassRange = Math.floor(dataArray.length * 0.1);
                 const bassSlice = dataArray.slice(0, bassRange);
@@ -220,7 +221,7 @@
                 const dynamicMax = Math.max(...dataArray) || 1;
                 const bassEnergy = Math.round((bassAvg / dynamicMax) * 99) + 1;
 
-                return Math.min(bassEnergy, 100);
+                return Math.min(bassEnergy, 1000);
             };
 
             const initSocket = () => {
