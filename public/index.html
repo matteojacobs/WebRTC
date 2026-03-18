@@ -93,7 +93,7 @@
                 // ─────────────────────────────────────────
                 //  PARAMETERS
                 // ─────────────────────────────────────────
-                const colorsAmount   = 6;
+                let colorsAmount   = 6;
                 const particleAmount = 1000;
                 const particleRadius = 3;
 
@@ -103,7 +103,7 @@
                 const deltaT      = 0.05;
                 const frictionHL  = 0.3;
                 const forceScale  = 8;
-                const maxSpeed    = 10;
+                const maxSpeed    = 0.5;
 
                 const frictionFactor = Math.pow(0.5, deltaT / frictionHL);
 
@@ -112,12 +112,16 @@
                 //  COLORS
                 // ─────────────────────────────────────────
                 const colors = {
-                    red:    '#ff4444',
-                    green:  '#44ff88',
-                    blue:   '#4488ff',
-                    yellow: '#ffdd44',
-                    orange: '#ff8833',
-                    purple: '#cc44ff',
+                    red:     '#ff4444',
+                    green:   '#44ff88',
+                    blue:    '#4488ff',
+                    yellow:  '#ffdd44',
+                    orange:  '#ff8833',
+                    purple:  '#cc44ff',
+                    cyan:    '#00ddff',
+                    pink:    '#ff44aa',
+                    lime:    '#aaff00',
+                    white:   '#ffffff',
                 };
 
                 const colorKeys = Object.keys(colors);
@@ -210,14 +214,37 @@
                     }
 
                     if (permissions.Battery === 'granted') {
+                        const newColorsAmount = Math.ceil(sensors.battery / 10);
+                        
 
+                        if (newColorsAmount > colorsAmount) {
+                            colorsAmount = newColorsAmount;
+                            const newColorIndex = colorsAmount - 1;
+                            makeRandomMatrix();
+                            const count = Math.floor(particleAmount / colorsAmount);
+                            for (let i = 0; i < count; i++) {
+                                particles.push({
+                                    positionX:  Math.random() * width,
+                                    positionY:  Math.random() * height,
+                                    velocityX:  0,
+                                    velocityY:  0,
+                                    colorIndex: newColorIndex,
+                                    color:      colorKeys[newColorIndex],
+                                });
+                            }
+                        }
+
+                        else if (newColorsAmount < colorsAmount) {
+                            colorsAmount = newColorsAmount;
+                            makeRandomMatrix();
+                            particles = particles.filter(p => p.colorIndex < colorsAmount);
+                        }                        
                     }
 
                     if (permissions.Orientation === 'granted') {
 
                     }
                 };
-
 
                 // ─────────────────────────────────────────
                 //  PHYSICS UPDATE
