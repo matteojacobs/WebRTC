@@ -1,0 +1,186 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Raleway:wght@300;400&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #080a0f;
+    overflow: hidden;
+    font-family: 'Raleway', sans-serif;
+}
+
+canvas {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+}
+
+/* ── centered overlay ───────────────────────────────────── */
+#qr-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+#qr-card {
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 20px;
+    padding: 36px 40px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,0.15),
+        0 8px 40px rgba(0,0,0,0.55),
+        0 0 80px rgba(100,160,255,0.12);
+
+    animation: cardIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes cardIn {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+#qr-card .eyebrow {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #9bb0cc;
+}
+
+#qr-card h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #0d1117;
+    text-align: center;
+    line-height: 1.55;
+    max-width: 240px;
+}
+
+#qr-card h1 em {
+    font-style: normal;
+    color: #3a6fd8;
+}
+
+#qr-code {
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    background: #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.07);
+}
+
+#qr-code img {
+    display: block;
+    border-radius: 6px;
+}
+
+/* waiting state before socket connects */
+#qr-code:empty::before {
+    content: '';
+    display: block;
+    width: 220px;
+    height: 220px;
+    border-radius: 8px;
+    background: linear-gradient(120deg, #e8edf5 25%, #f4f6fb 50%, #e8edf5 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+#qr-card .hint {
+    font-family: 'Raleway', sans-serif;
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: #a0aab8;
+    text-align: center;
+}
+
+/* ── two-state card ─────────────────────────────────────── */
+#state-scan,
+#state-connected {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+#state-connected {
+    display: none;
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+/* when connected: swap states */
+#qr-card.is-connected #state-scan {
+    display: none;
+}
+
+#qr-card.is-connected #state-connected {
+    display: flex;
+    animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* pulsing star icon */
+.connected-icon {
+    font-size: 38px;
+    color: #3a6fd8;
+    animation: pulse 2.4s ease-in-out infinite;
+    line-height: 1;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1;   transform: scale(1);    }
+    50%       { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* ── badge ─────────────────────────────────────────────── */
+#badge {
+    position: fixed;
+    bottom: 18px;
+    right: 22px;
+    z-index: 20;
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.25);
+    pointer-events: none;
+}
+
+#hud {
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 5;
+    pointer-events: none;
+}

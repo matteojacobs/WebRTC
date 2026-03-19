@@ -1,0 +1,525 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Raleway:wght@300;400&family=Share+Tech+Mono&display=swap');
+
+/* ── Variables ──────────────────────────────────────────── */
+:root {
+    --bg:           #000000;
+    --surface:      #0a0c10;
+    --surface2:     #0e1016;
+    --border:       rgba(255,255,255,0.07);
+    --border-soft:  rgba(255,255,255,0.04);
+    --accent:       #3a6fd8;
+    --accent-glow:  rgba(58,111,216,0.35);
+    --accent2:      #00ddff;
+    --dim:          rgba(255,255,255,0.18);
+    --text:         rgba(255,255,255,0.82);
+    --text-dim:     rgba(255,255,255,0.30);
+    --green:        #44ff88;
+    --red:          #ff4444;
+    --yellow:       #ffdd44;
+}
+
+/* ── Reset ──────────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Raleway', sans-serif;
+    font-weight: 300;
+    min-height: 100dvh;
+    overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PERMISSION OVERLAY
+═══════════════════════════════════════════════════════════ */
+#perm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.94);
+    backdrop-filter: blur(8px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+#perm-overlay.hide {
+    opacity: 0;
+    transform: scale(0.97);
+    pointer-events: none;
+}
+
+#perm-card {
+    background: rgba(255,255,255,0.97);
+    border-radius: 20px;
+    padding: 36px 40px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    max-width: 320px;
+    width: 90%;
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,0.12),
+        0 8px 40px rgba(0,0,0,0.6),
+        0 0 80px var(--accent-glow);
+    animation: cardIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+#perm-card .eyebrow {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #9bb0cc;
+}
+
+#perm-card h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: #0d1117;
+    text-align: center;
+    line-height: 1.6;
+}
+
+#perm-card h1 em {
+    font-style: normal;
+    color: #3a6fd8;
+}
+
+#perm-card .hint {
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.07em;
+    color: #a0aab8;
+    text-align: center;
+}
+
+#perm-card #btn {
+    margin-top: 4px;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #fff;
+    background: #3a6fd8;
+    border: none;
+    border-radius: 10px;
+    padding: 13px 28px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+    box-shadow: 0 4px 20px rgba(58,111,216,0.4);
+}
+
+#perm-card #btn:hover  { background: #2d5ab8; box-shadow: 0 4px 28px rgba(58,111,216,0.6); }
+#perm-card #btn:active { transform: scale(0.97); }
+
+/* ═══════════════════════════════════════════════════════════
+   APP SHELL
+═══════════════════════════════════════════════════════════ */
+#app {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-height: 100dvh;
+    background: var(--border-soft);
+}
+
+#app.hidden { display: none; }
+
+/* ── Header ─────────────────────────────────────────────── */
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 20px;
+    background: var(--surface);
+    animation: fadeDown 0.4s ease both;
+}
+
+@keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.eyebrow {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+#status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--green);
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: blink 2.8s ease-in-out infinite;
+}
+
+@keyframes blink {
+    0%, 90%, 100% { opacity: 1; }
+    45%           { opacity: 0.25; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PANELS
+═══════════════════════════════════════════════════════════ */
+.panel {
+    background: var(--surface);
+    padding: 15px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: fadeUp 0.45s ease both;
+}
+
+/* direction panel fills remaining vertical space */
+.panel-direction {
+    flex: 1;
+}
+
+.panel:nth-child(2) { animation-delay: 0.04s; }
+.panel:nth-child(3) { animation-delay: 0.08s; }
+.panel:nth-child(4) { animation-delay: 0.12s; }
+.panel:nth-child(5) { animation-delay: 0.16s; }
+.panel:nth-child(6) { animation-delay: 0.20s; }
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Panel header row ───────────────────────────────────── */
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.panel-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-label {
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    transition: color 0.3s;
+}
+
+/* ── Permission badge ───────────────────────────────────── */
+.permission-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 4px;
+    transition: background 0.3s, color 0.3s;
+}
+
+.badge-granted {
+    background: rgba(68, 255, 136, 0.10);
+    color: var(--green);
+    border: 1px solid rgba(68, 255, 136, 0.20);
+}
+
+.badge-denied {
+    background: rgba(255, 68, 68, 0.08);
+    color: var(--red);
+    border: 1px solid rgba(255, 68, 68, 0.18);
+}
+
+.badge-muted {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+}
+
+/* ── Toggle pill button ─────────────────────────────────── */
+.toggle-btn {
+    position: relative;
+    width: 34px;
+    height: 19px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    transition: background 0.25s, border-color 0.25s;
+    flex-shrink: 0;
+    /* hide if not interactive */
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* thumb */
+.toggle-btn::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s;
+}
+
+/* show toggle only when it can be interacted with */
+.toggle-btn.can-toggle {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.toggle-btn.no-toggle {
+    display: none;
+}
+
+/* ON state */
+.toggle-btn.is-on {
+    background: rgba(58, 111, 216, 0.25);
+    border-color: var(--accent);
+}
+
+.toggle-btn.is-on::after {
+    transform: translateX(15px);
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent-glow);
+}
+
+/* OFF state */
+.toggle-btn.is-off {
+    background: var(--surface2);
+    border-color: var(--border);
+}
+
+.toggle-btn.is-off::after {
+    transform: translateX(0);
+    background: var(--text-dim);
+    box-shadow: none;
+}
+
+/* ── Muted & disabled panel states ─────────────────────── */
+.panel-muted .panel-body {
+    opacity: 0.28;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.panel-muted .section-label {
+    color: var(--text-dim);
+}
+
+.panel-disabled {
+    opacity: 0.45;
+}
+
+.panel-disabled .section-label {
+    color: var(--text-dim);
+}
+
+.panel-disabled .panel-body {
+    pointer-events: none;
+}
+
+/* ── Panel body ─────────────────────────────────────────── */
+.panel-body {
+    transition: opacity 0.3s;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SENSOR BARS
+═══════════════════════════════════════════════════════════ */
+.sensor-row {
+    display: flex;
+    gap: 12px;
+}
+
+.sensor-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.sensor-block.wide { flex: unset; width: 100%; }
+
+.sensor-name {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.bar-track {
+    position: relative;
+    height: 5px;
+    background: var(--surface2);
+    border-radius: 3px;
+    border: 1px solid var(--border);
+}
+
+.bar-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    border-radius: 3px;
+    width: 0%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent-glow);
+    transition: width 0.09s linear, left 0.09s linear;
+}
+
+/* center-origin tilt bars */
+.bar-track.center-origin .bar-fill {
+    background: var(--accent2);
+    box-shadow: 0 0 6px rgba(0,221,255,0.35);
+}
+
+.bar-center-line {
+    position: absolute;
+    left: 50%;
+    top: -2px;
+    bottom: -2px;
+    width: 1px;
+    background: rgba(255,255,255,0.15);
+    transform: translateX(-50%);
+}
+
+/* bar colour variants */
+.bar-fill.accent  { background: var(--accent);  box-shadow: 0 0 6px var(--accent-glow); }
+.bar-fill.accent2 { background: var(--accent2); box-shadow: 0 0 6px rgba(0,221,255,0.35); }
+.bar-fill.mic     { background: var(--accent2); box-shadow: 0 0 6px rgba(0,221,255,0.35); }
+.bar-fill.battery { background: var(--green);   box-shadow: 0 0 6px rgba(68,255,136,0.25); }
+
+/* ═══════════════════════════════════════════════════════════
+   COMPASS
+═══════════════════════════════════════════════════════════ */
+.compass-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    padding: 8px 0 4px;
+}
+
+#compass {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+#compass-svg {
+    width: min(220px, 72vw);
+    height: min(220px, 72vw);
+    filter: drop-shadow(0 0 18px rgba(58,111,216,0.12));
+}
+
+.compass-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 7px;
+    fill: var(--text-dim);
+}
+
+.compass-label-main {
+    font-size: 8.5px;
+    fill: rgba(255,255,255,0.5);
+}
+
+.compass-label-diag {
+    font-size: 5.5px;
+    fill: rgba(255,255,255,0.2);
+}
+
+#compass-arrow {
+    transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+#compass-label-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    min-height: 20px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SHUFFLE ROW
+═══════════════════════════════════════════════════════════ */
+.shuffle-row {
+    flex-direction: row;
+    padding: 12px 18px;
+    flex: 0;
+}
+
+.shuffle-btn {
+    width: 100%;
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.shuffle-btn:hover {
+    color: var(--text);
+    border-color: rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.04);
+}
+
+.shuffle-btn:active { transform: scale(0.98); }
+
+.shuffle-icon {
+    font-size: 16px;
+    display: inline-block;
+    transition: transform 0.6s ease;
+}
+
+.shuffle-btn.spinning .shuffle-icon {
+    transform: rotate(360deg);
+}

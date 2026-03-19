@@ -3,27 +3,175 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Phone</title>
+        <title>Wand Controller</title>
+        <link rel="stylesheet" href="./styling/controller_styling.css">
     </head>
     <body>
-        <h1>You connected phone and computer</h1>
-        <button id="btn">Request Permission</button>
+
+        <!-- ── Permission overlay ─────────────────────────────── -->
+        <div id="perm-overlay">
+            <div id="perm-card">
+                <span class="eyebrow">Initialising Wand</span>
+                <h1>Awaken your wand's <em>senses</em> to command the microbial world</h1>
+                <p class="hint">Motion, orientation &amp; microphone access required</p>
+                <button id="btn">Grant Permissions</button>
+            </div>
+        </div>
+
+        <!-- ── Main UI ────────────────────────────────────────── -->
+        <div id="app" class="hidden">
+
+            <!-- Header -->
+            <header>
+                <span class="eyebrow">Magic Wand</span>
+                <div id="status">
+                    <span class="status-dot"></span>
+                    <span>Connected</span>
+                </div>
+            </header>
+
+            <!-- Gyro section -->
+            <section class="panel toggleable" id="panel-gyro">
+                <div class="panel-header">
+                    <h2 class="section-label">Gyroscope</h2>
+                    <div class="panel-right">
+                        <span class="permission-badge" id="badge-gyro"></span>
+                        <button class="toggle-btn" id="toggle-gyro" aria-label="Toggle gyroscope"></button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="sensor-row">
+                        <div class="sensor-block">
+                            <span class="sensor-name">Tilt X</span>
+                            <div class="bar-track center-origin">
+                                <div class="bar-fill" id="bar-tiltX"></div>
+                                <div class="bar-center-line"></div>
+                            </div>
+                        </div>
+                        <div class="sensor-block">
+                            <span class="sensor-name">Tilt Y</span>
+                            <div class="bar-track">
+                                <div class="bar-fill accent2" id="bar-tiltY"></div>
+                            </div>
+                        </div>
+                        <div class="sensor-block">
+                            <span class="sensor-name">Motion</span>
+                            <div class="bar-track">
+                                <div class="bar-fill accent" id="bar-gyro"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Microphone section -->
+            <section class="panel toggleable" id="panel-mic">
+                <div class="panel-header">
+                    <h2 class="section-label">Microphone</h2>
+                    <div class="panel-right">
+                        <span class="permission-badge" id="badge-mic"></span>
+                        <button class="toggle-btn" id="toggle-mic" aria-label="Toggle microphone"></button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="sensor-block wide">
+                        <span class="sensor-name">Bass Energy</span>
+                        <div class="bar-track">
+                            <div class="bar-fill mic" id="bar-mic"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Battery section -->
+            <section class="panel toggleable" id="panel-battery">
+                <div class="panel-header">
+                    <h2 class="section-label">Battery</h2>
+                    <div class="panel-right">
+                        <span class="permission-badge" id="badge-battery"></span>
+                        <button class="toggle-btn" id="toggle-battery" aria-label="Toggle battery"></button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="sensor-block wide">
+                        <span class="sensor-name">Charge</span>
+                        <div class="bar-track">
+                            <div class="bar-fill battery" id="bar-battery"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Direction section — full width, grows to fill space -->
+            <section class="panel toggleable panel-direction" id="panel-direction">
+                <div class="panel-header">
+                    <h2 class="section-label">Direction</h2>
+                    <div class="panel-right">
+                        <span class="permission-badge" id="badge-direction"></span>
+                        <button class="toggle-btn" id="toggle-direction" aria-label="Toggle direction"></button>
+                    </div>
+                </div>
+                <div class="panel-body compass-body">
+                    <div id="compass">
+                        <svg viewBox="0 0 100 100" id="compass-svg">
+                            <circle cx="50" cy="50" r="44" fill="none" stroke="var(--border)" stroke-width="1.5"/>
+                            <!-- cardinal ticks -->
+                            <line x1="50" y1="7"  x2="50" y2="14" stroke="var(--text-dim)" stroke-width="1.2"/>
+                            <line x1="93" y1="50" x2="86" y2="50" stroke="var(--text-dim)" stroke-width="1.2"/>
+                            <line x1="50" y1="93" x2="50" y2="86" stroke="var(--text-dim)" stroke-width="1.2"/>
+                            <line x1="7"  y1="50" x2="14" y2="50" stroke="var(--text-dim)" stroke-width="1.2"/>
+                            <!-- diagonal ticks -->
+                            <line x1="78" y1="22" x2="74" y2="26" stroke="var(--border)" stroke-width="1"/>
+                            <line x1="78" y1="78" x2="74" y2="74" stroke="var(--border)" stroke-width="1"/>
+                            <line x1="22" y1="78" x2="26" y2="74" stroke="var(--border)" stroke-width="1"/>
+                            <line x1="22" y1="22" x2="26" y2="26" stroke="var(--border)" stroke-width="1"/>
+                            <!-- labels -->
+                            <text x="50" y="5"  text-anchor="middle" class="compass-label compass-label-main">N</text>
+                            <text x="97" y="54" text-anchor="middle" class="compass-label">E</text>
+                            <text x="50" y="101" text-anchor="middle" class="compass-label compass-label-main">S</text>
+                            <text x="3"  y="54" text-anchor="middle" class="compass-label">W</text>
+                            <text x="81" y="19" text-anchor="middle" class="compass-label compass-label-diag">NE</text>
+                            <text x="81" y="84" text-anchor="middle" class="compass-label compass-label-diag">SE</text>
+                            <text x="19" y="84" text-anchor="middle" class="compass-label compass-label-diag">SW</text>
+                            <text x="19" y="19" text-anchor="middle" class="compass-label compass-label-diag">NW</text>
+                            <!-- center -->
+                            <circle cx="50" cy="50" r="2.5" fill="var(--text-dim)"/>
+                            <!-- arrow -->
+                            <g id="compass-arrow" transform="rotate(0 50 50)">
+                                <polygon points="50,12 54,48 50,55 46,48" fill="var(--accent)"/>
+                                <polygon points="50,88 54,52 50,55 46,52" fill="var(--dim)"/>
+                            </g>
+                        </svg>
+                        <span id="compass-label-text">—</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Shuffle row -->
+            <section class="panel shuffle-row">
+                <button class="shuffle-btn" id="btn-shuffle">
+                    <span class="shuffle-icon">⟳</span>
+                    Shuffle Attraction Rules
+                </button>
+            </section>
+
+        </div>
 
         <script
             src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"
             integrity="sha512-0f7Ahsuvr+/P2btTY4mZIw9Vl23lS6LY/Y7amdkmUg2dqsUF+cTe4QjWvj/NIBHJoGksOiqndKQuI9yzn2hB0g=="
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
         <script src="/socket.io/socket.io.js"></script>
+
         <script>
         {
             const computerId = new URLSearchParams(window.location.search).get('id');
             let socket;
             let peer;
             let permissionResults;
+            let originalPermissions;
             let sensorInformation;
 
-            // ── Shared sensor state (written by persistent listeners) ──────────────
             const sensorState = {
                 vertical: 'N/A',
                 horizontal: 'N/A',
@@ -31,161 +179,227 @@
                 compassOrientation: null,
                 batteryPercentage: 1,
             };
-            
 
             const servers = {
-                iceServers: [{
-                    urls: 'stun:stun.l.google.com:19302'
-                }]
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
             };
 
+            const compassDegrees = {
+                'N': 0, 'NE': 45, 'E': 90, 'SE': 135,
+                'S': 180, 'SW': 225, 'W': 270, 'NW': 315
+            };
+
+            // ── Bar helpers ───────────────────────────────────────
+            const setBar = (id, pct) => {
+                const el = document.getElementById(id);
+                if (el) el.style.width = Math.max(0, Math.min(100, pct)) + '%';
+            };
+
+            const setTiltBar = (id, value) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const clamped = Math.max(-90, Math.min(90, parseFloat(value) || 0));
+                const pct = ((clamped + 90) / 180) * 100;
+                el.style.width = Math.abs(pct - 50) + '%';
+                el.style.left  = clamped < 0 ? pct + '%' : '50%';
+            };
+
+            const updateCompass = (dir) => {
+                const deg = compassDegrees[dir];
+                if (deg === undefined) return;
+                document.getElementById('compass-arrow').setAttribute(
+                    'transform', `rotate(${deg} 50 50)`
+                );
+                document.getElementById('compass-label-text').textContent = dir;
+            };
+
+            // ── Apply permission states to UI after perms granted ─
+            const applyPermissionStates = () => {
+                const panels = [
+                    { panelId: 'panel-gyro',      key: 'Gyro',        badgeId: 'badge-gyro',       toggleId: 'toggle-gyro' },
+                    { panelId: 'panel-mic',        key: 'Microphone',  badgeId: 'badge-mic',        toggleId: 'toggle-mic' },
+                    { panelId: 'panel-battery',    key: 'battery',     badgeId: 'badge-battery',    toggleId: 'toggle-battery' },
+                    { panelId: 'panel-direction',  key: 'Orientation', badgeId: 'badge-direction',  toggleId: 'toggle-direction' },
+                ];
+
+                for (const { panelId, key, badgeId, toggleId } of panels) {
+                    const status   = permissionResults[key];
+                    const panel    = document.getElementById(panelId);
+                    const badgeEl  = document.getElementById(badgeId);
+                    const toggleEl = document.getElementById(toggleId);
+
+                    if (status === 'granted') {
+                        badgeEl.textContent = 'active';
+                        badgeEl.className   = 'permission-badge badge-granted';
+                        toggleEl.classList.add('can-toggle', 'is-on');
+                        toggleEl.addEventListener('click', () => {
+                            const on = permissionResults[key] === 'denied';
+                            permissionResults[key] = on ? originalPermissions[key] : 'denied';
+                            toggleEl.classList.toggle('is-on',  on);
+                            toggleEl.classList.toggle('is-off', !on);
+                            badgeEl.textContent = on ? 'active' : 'muted';
+                            badgeEl.className   = on
+                                ? 'permission-badge badge-granted'
+                                : 'permission-badge badge-muted';
+                            panel.classList.toggle('panel-muted', !on);
+                        });
+                    } else {
+                        badgeEl.textContent = status === 'impossible' ? 'unavailable' : 'denied';
+                        badgeEl.className   = 'permission-badge badge-denied';
+                        panel.classList.add('panel-disabled');
+                        toggleEl.disabled = true;
+                        toggleEl.classList.add('no-toggle');
+                    }
+                }
+            };
+
+            // ── Live UI update ────────────────────────────────────
+            const startUILoop = () => {
+                setInterval(() => {
+                    if (!sensorInformation?.sensors) return;
+                    const s = sensorInformation.sensors;
+                    setTiltBar('bar-tiltX', s.tiltX);
+                    setBar('bar-tiltY', (Math.abs(parseFloat(s.tiltY) || 0) / 90) * 100);
+                    setBar('bar-gyro',    s.gyroMagnitude);
+                    setBar('bar-mic',     s.bassEnergy);
+                    setBar('bar-battery', s.battery);
+                    if (s.compassOrientation) updateCompass(s.compassOrientation);
+                }, 80);
+            };
+
+            // ── Init ──────────────────────────────────────────────
             const init = () => {
                 initSocket();
 
                 document.getElementById('btn').addEventListener('click', async () => {
                     const allAsked = await permissionRequests();
                     if (allAsked) {
+                        applyPermissionStates();
                         dataCollection();
-                    } 
+                        dismissPermOverlay();
+                        document.getElementById('app').classList.remove('hidden');
+                        startUILoop();
+                    }
                 });
-            }
 
+                document.getElementById('btn-shuffle').addEventListener('click', () => {
+                    if (peer && peer.connected) {
+                        peer.send(JSON.stringify({ command: 'shuffle' }));
+                    }
+                    const btn = document.getElementById('btn-shuffle');
+                    btn.classList.add('spinning');
+                    setTimeout(() => btn.classList.remove('spinning'), 600);
+                });
+            };
+
+            const dismissPermOverlay = () => {
+                const overlay = document.getElementById('perm-overlay');
+                overlay.classList.add('hide');
+                setTimeout(() => overlay.remove(), 700);
+            };
+
+            // ── Permissions ───────────────────────────────────────
             const permissionRequests = async () => {
-                const permissionRequestResults = {
-                    Orientation: "denied",
-                    Gyro: "denied",
-                    Microphone: "denied",
-                    battery: "denied",
+                const results = {
+                    Orientation: 'denied', Gyro: 'denied',
+                    Microphone: 'denied',  battery: 'denied',
                 };
-
-                permissionRequestResults.Orientation = await requestOrientation();
-                permissionRequestResults.Gyro = await requestGyro();
-                permissionRequestResults.battery = await requestBattery();
-                permissionRequestResults.Microphone = await requestMicrophone();
-
-                permissionResults = permissionRequestResults;
-                const allAsked = Object.values(permissionRequestResults);
-                return allAsked
+                results.Orientation = await requestOrientation();
+                results.Gyro        = await requestGyro();
+                results.battery     = await requestBattery();
+                results.Microphone  = await requestMicrophone();
+                permissionResults   = results;
+                originalPermissions = { ...results };
+                return Object.values(results);
             };
 
             const requestOrientation = async () => {
                 try {
-                    if (typeof DeviceOrientationEvent !== "undefined" &&
-                        typeof DeviceOrientationEvent?.requestPermission === "function") {
-                        
-                        const permission = await DeviceOrientationEvent.requestPermission();
-                        if (permission !== "granted") return "denied";
-                    } else if (typeof DeviceOrientationEvent === "undefined") {
-                        return "impossible";
+                    if (typeof DeviceOrientationEvent !== 'undefined' &&
+                        typeof DeviceOrientationEvent.requestPermission === 'function') {
+                        const p = await DeviceOrientationEvent.requestPermission();
+                        if (p !== 'granted') return 'denied';
+                    } else if (typeof DeviceOrientationEvent === 'undefined') {
+                        return 'impossible';
                     }
-
-                    const hasData = await new Promise((resolve) => {
-                        const timeout = setTimeout(() => resolve(false), 500);
-
-                        window.addEventListener("deviceorientation", (e) => {
-                            clearTimeout(timeout);
+                    const hasData = await new Promise(resolve => {
+                        const t = setTimeout(() => resolve(false), 500);
+                        window.addEventListener('deviceorientation', e => {
+                            clearTimeout(t);
                             resolve(e.alpha !== null || e.beta !== null || e.gamma !== null);
                         }, { once: true });
                     });
-
-                    // ── Register the persistent orientation + compass listener ─────────
                     if (hasData) {
-                        window.addEventListener('deviceorientation', (event) => {
+                        window.addEventListener('deviceorientation', event => {
                             sensorState.vertical   = event.beta  !== null ? event.beta.toFixed(1)  : 'N/A';
                             sensorState.horizontal = event.gamma !== null ? event.gamma.toFixed(1) : 'N/A';
-
                             if (event.webkitCompassHeading !== undefined) {
-                                const heading = event.webkitCompassHeading;
-                                const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-                                sensorState.compassOrientation = directions[Math.round(heading / 45) % 8];
+                                const h = event.webkitCompassHeading;
+                                const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+                                sensorState.compassOrientation = dirs[Math.round(h / 45) % 8];
                             } else if (event.absolute && event.alpha !== null) {
-                                const heading = (360 - event.alpha) % 360;
-                                const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-                                sensorState.compassOrientation = directions[Math.round(heading / 45) % 8];
+                                const h = (360 - event.alpha) % 360;
+                                const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+                                sensorState.compassOrientation = dirs[Math.round(h / 45) % 8];
                             }
                         });
                     }
-
-                    return hasData ? "granted" : "impossible";
-
-                } catch (error) {
-                    return "impossible";
-                }
+                    return hasData ? 'granted' : 'impossible';
+                } catch { return 'impossible'; }
             };
 
             const requestGyro = async () => {
                 try {
-                    if (typeof DeviceMotionEvent !== "undefined" &&
-                        typeof DeviceMotionEvent.requestPermission === "function") {
-                        
-                        const permission = await DeviceMotionEvent.requestPermission();
-                        if (permission !== "granted") return "denied";
-                    } else if (typeof DeviceMotionEvent === "undefined") {
-                        return "impossible";
+                    if (typeof DeviceMotionEvent !== 'undefined' &&
+                        typeof DeviceMotionEvent.requestPermission === 'function') {
+                        const p = await DeviceMotionEvent.requestPermission();
+                        if (p !== 'granted') return 'denied';
+                    } else if (typeof DeviceMotionEvent === 'undefined') {
+                        return 'impossible';
                     }
-
-                    const hasData = await new Promise((resolve) => {
-                        const timeout = setTimeout(() => resolve(false), 500);
-
-                        window.addEventListener("devicemotion", (e) => {
-                            clearTimeout(timeout);
-                            resolve(e.rotationRate?.alpha !== null || e.rotationRate?.beta !== null || e.rotationRate?.gamma !== null);
+                    const hasData = await new Promise(resolve => {
+                        const t = setTimeout(() => resolve(false), 500);
+                        window.addEventListener('devicemotion', e => {
+                            clearTimeout(t);
+                            resolve(e.rotationRate?.alpha !== null);
                         }, { once: true });
                     });
-
-                    // ── Register the persistent gyro listener ─────────────────────────
                     if (hasData) {
-                        window.addEventListener('devicemotion', (event) => {
+                        window.addEventListener('devicemotion', event => {
                             const { alpha, beta, gamma } = event.rotationRate ?? {};
                             if (alpha == null) return;
                             const raw = Math.sqrt(alpha ** 2 + beta ** 2 + gamma ** 2);
                             sensorState.gyroMagnitude = Math.min(Math.round((raw / 500) * 100), 100);
                         });
                     }
-
-                    return hasData ? "granted" : "impossible";
-
-                } catch (error) {
-                    return "impossible";
-                }
+                    return hasData ? 'granted' : 'impossible';
+                } catch { return 'impossible'; }
             };
 
+            let micStream, audioContext, analyser;
             const requestMicrophone = async () => {
                 try {
-                    micStream = await navigator.mediaDevices.getUserMedia({
-                        audio: true,
-                        video: false
-                    });
-                
+                    micStream    = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                     audioContext = new AudioContext();
-                    analyser = audioContext.createAnalyser();
+                    analyser     = audioContext.createAnalyser();
                     analyser.fftSize = 256;
-                    
-                    const source = audioContext.createMediaStreamSource(micStream);
-                    source.connect(analyser);
-
-                    return "granted";
-
-                } catch (error) {
-                    return "denied";
-                }
+                    audioContext.createMediaStreamSource(micStream).connect(analyser);
+                    return 'granted';
+                } catch { return 'denied'; }
             };
 
             const requestBattery = async () => {
-                if (!navigator.getBattery) {
-                    return "impossible";
-                } else {
-                    // ── Register the persistent battery listener here ─────────────────
-                    const battery = await navigator.getBattery();
+                if (!navigator.getBattery) return 'impossible';
+                const battery = await navigator.getBattery();
+                sensorState.batteryPercentage = Math.round(battery.level * 100);
+                battery.addEventListener('levelchange', () => {
                     sensorState.batteryPercentage = Math.round(battery.level * 100);
-                    battery.addEventListener('levelchange', () => {
-                        sensorState.batteryPercentage = Math.round(battery.level * 100);
-                    });
-                    return "granted";
-                }
+                });
+                return 'granted';
             };
 
-            // ── dataCollection: now fully synchronous, just reads sensorState ──────
+            // ── Data collection ───────────────────────────────────
+            // permissionResults is mutated directly by toggles — just send it as-is
             const dataCollection = () => {
                 setInterval(() => {
                     const sensorData = {
@@ -196,79 +410,51 @@
                         compassOrientation: sensorState.compassOrientation,
                         battery:            sensorState.batteryPercentage,
                     };
-
-                    sensorInformation = {
-                        permissions: permissionResults,
-                        sensors: sensorData
-                    };
-
+                    sensorInformation = { permissions: permissionResults, sensors: sensorData };
                     if (peer && peer.connected) {
                         peer.send(JSON.stringify(sensorInformation));
                     }
-
                 }, 100);
-            };   
+            };
 
             const microphoneData = () => {
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                if (!analyser) return 1;
+                const dataArray  = new Uint8Array(analyser.frequencyBinCount);
                 analyser.getByteFrequencyData(dataArray);
                 analyser.smoothingTimeConstant = 0.3;
-
-                const bassRange = Math.floor(dataArray.length * 0.1);
-                const bassSlice = dataArray.slice(0, bassRange);
-                const bassAvg = bassSlice.reduce((sum, v) => sum + v, 0) / bassRange;
-
+                const bassRange  = Math.floor(dataArray.length * 0.1);
+                const bassSlice  = dataArray.slice(0, bassRange);
+                const bassAvg    = bassSlice.reduce((s, v) => s + v, 0) / bassRange;
                 const dynamicMax = Math.max(...dataArray) || 1;
-                const bassEnergy = Math.round((bassAvg / dynamicMax) * 99) + 1;
-
-                return Math.min(bassEnergy, 1000);
+                return Math.min(Math.round((bassAvg / dynamicMax) * 99) + 1, 1000);
             };
 
+            // ── Wake lock ─────────────────────────────────────────
             const requestWakeLock = async () => {
-                try {
-                    await navigator.wakeLock.request('screen');
-                } catch (e) {
-                    console.log('Wake lock failed:', e);
-                }
+                try { await navigator.wakeLock.request('screen'); } catch {}
             };
-
             requestWakeLock();
-
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') requestWakeLock();
             });
 
+            // ── Socket / peer ─────────────────────────────────────
             const initSocket = () => {
-                socket = io.connect("/");
-
+                socket = io.connect('/');
                 socket.on('connect', () => {
-                    peer = new SimplePeer({
-                        initiator: true,
-                        config: servers
-                    });
-
-                    peer.on('signal', data => {
-                        socket.emit('signal', computerId, data);
-                    });
-
+                    peer = new SimplePeer({ initiator: true, config: servers });
+                    peer.on('signal', data => socket.emit('signal', computerId, data));
                     peer.on('connect', () => {
-                        if (sensorInformation) {
-                            peer.send(JSON.stringify(sensorInformation));
-                        }
+                        if (sensorInformation) peer.send(JSON.stringify(sensorInformation));
                     });
-
                 });
-
-                socket.on('signal', async (myId, signal, peerId) => {
-                    if (peer && !peer.destroyed) {
-                        peer.signal(signal);
-                    };
-
-                });            
+                socket.on('signal', (myId, signal, peerId) => {
+                    if (peer && !peer.destroyed) peer.signal(signal);
+                });
             };
 
             init();
         }
-    </script>
+        </script>
     </body>
 </html>
