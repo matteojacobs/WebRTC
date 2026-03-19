@@ -42,6 +42,24 @@
             let phoneData = null;
             let overlayDismissed = false;
 
+            let baseMatrix = [];
+            let attractionMatrix = [];
+            let colorsAmount = 8;
+
+            const makeRandomMatrix = () => {
+                baseMatrix = [];
+                for (let i = 0; i < colorsAmount; i++) {
+                    const cols = [];
+                    for (let j = 0; j < colorsAmount; j++) {
+                        let v = Math.random() * 2 - 1;
+                        if (Math.abs(v) < 0.15) v = (v >= 0 ? 1 : -1) * 0.5;
+                        cols.push(v);
+                    }
+                    baseMatrix.push(cols);
+                }
+                attractionMatrix = baseMatrix.map(row => [...row]);
+            };
+
             const servers = {
                 iceServers: [{
                     urls: 'stun:stun.l.google.com:19302'
@@ -91,8 +109,19 @@
                         });
 
                         peer.on('data', (data) => {
-                            phoneData = JSON.parse(data);
-                            dismissOverlay();
+                            const parsed = JSON.parse(data);
+
+                            if (parsed.action === 'shuffleMatrix') {
+                                makeRandomMatrix();
+                                return;
+                            }
+
+                            else {
+                                phoneData = parsed
+                                dismissOverlay();
+                            }
+
+                            
                         });
                     }
 
@@ -115,7 +144,6 @@
                 window.addEventListener('resize', resize);
                 resize();
 
-                let colorsAmount   = 8;
                 const particleAmount = 1000;
                 let particleRadius = 3;
 
@@ -156,23 +184,6 @@
                         return a * (1 - Math.abs(r - mid) / (1 - mid));
                     }
                     return 0;
-                };
-
-                let baseMatrix = [];
-                let attractionMatrix = [];
-
-                const makeRandomMatrix = () => {
-                    baseMatrix = [];
-                    for (let i = 0; i < colorsAmount; i++) {
-                        const cols = [];
-                        for (let j = 0; j < colorsAmount; j++) {
-                            let v = Math.random() * 2 - 1;
-                            if (Math.abs(v) < 0.15) v = (v >= 0 ? 1 : -1) * 0.5;
-                            cols.push(v);
-                        }
-                        baseMatrix.push(cols);
-                    }
-                    attractionMatrix = baseMatrix.map(row => [...row]);
                 };
 
                 makeRandomMatrix();

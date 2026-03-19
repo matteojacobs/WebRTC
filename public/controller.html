@@ -438,6 +438,10 @@
                 if (document.visibilityState === 'visible') requestWakeLock();
             });
 
+            document.getElementById('btn-shuffle').addEventListener('click', () => {
+                peer.send(JSON.stringify({ action: 'shuffleMatrix' }));
+            });
+
             // ── Socket / peer ─────────────────────────────────────
             const initSocket = () => {
                 socket = io.connect('/');
