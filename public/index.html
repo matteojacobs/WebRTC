@@ -63,7 +63,8 @@
 
                         peer.on('data', (data) => {
                             phoneData = JSON.parse(data);
-                            console.log(phoneData);
+                            console.log(phoneData.sensors.tiltY, phoneData.sensors.compassOrientation);
+                            
                             
                         });
                     }
@@ -94,9 +95,9 @@
                 // ─────────────────────────────────────────
                 //  PARAMETERS
                 // ─────────────────────────────────────────
-                let colorsAmount   = 6;
+                let colorsAmount   = 8;
                 const particleAmount = 1000;
-                const particleRadius = 3;
+                let particleRadius = 3;
 
                 const maxDistance   = Math.min(width, height) * 0.1;
                 const repulsionZone = 0.3;
@@ -107,6 +108,11 @@
                 let maxSpeed    = 2;
 
                 const frictionFactor = Math.pow(0.5, deltaT / frictionHL);
+
+                // ─────────────────────────────────────────
+                //  GRAVITY (set by compass + tiltY)
+                // ─────────────────────────────────────────
+                let gravity = { x: 0, y: 0 };
 
 
                 // ─────────────────────────────────────────
@@ -199,7 +205,10 @@
                     const sensors = phoneData.sensors;
 
                     if (permissions.Gyro === 'granted') {
-                        maxSpeed = 0.5 + (sensors.gyroMagnitude / 50) * 4.5;
+                        const tiltX = (Math.max(-180, Math.min(180, sensors.tiltX)) + 180) / 360;
+
+                        maxSpeed = 3 + (sensors.gyroMagnitude / 50) * 7;
+                        particleRadius = 2 + Math.pow(tiltX, 3) * 10;
                     }
 
                     if (permissions.Microphone === 'granted') {
@@ -215,7 +224,6 @@
 
                     if (permissions.Battery === 'granted') {
                         const newColorsAmount = Math.ceil(sensors.battery / 10);
-                        
 
                         if (newColorsAmount > colorsAmount) {
                             colorsAmount = newColorsAmount;
@@ -242,7 +250,30 @@
                     }
 
                     if (permissions.Orientation === 'granted') {
+                        const compassMap = {
+                            'N':  { gx:  0,            gy: -1            },
+                            'NE': { gx:  1/Math.SQRT2, gy: -1/Math.SQRT2 },
+                            'E':  { gx:  1,            gy:  0            },
+                            'SE': { gx:  1/Math.SQRT2, gy:  1/Math.SQRT2 },
+                            'S':  { gx:  0,            gy:  1            },
+                            'SW': { gx: -1/Math.SQRT2, gy:  1/Math.SQRT2 },
+                            'W':  { gx: -1,            gy:  0            },
+                            'NW': { gx: -1/Math.SQRT2, gy: -1/Math.SQRT2 },
+                        };
 
+                        const direction = compassMap[sensors.compassOrientation];
+
+                        if (direction) {
+                            // abs(tiltY) goes 0→180, map that to a 0→1 strength
+                            const tiltStrength = Math.abs(sensors.tiltY) / 90;
+
+                            // Scale how strongly gravity pulls — tweak 0.15 to taste
+                            gravity.x = direction.gx * tiltStrength * 3;
+                            gravity.y = direction.gy * tiltStrength * 3;
+                        } else {
+                            gravity.x = 0;
+                            gravity.y = 0;
+                        }
                     }
                 };
 
@@ -282,6 +313,10 @@
 
                         pi.velocityX = pi.velocityX * frictionFactor + fx * forceScale * deltaT;
                         pi.velocityY = pi.velocityY * frictionFactor + fy * forceScale * deltaT;
+
+                        // Apply compass gravity directly to velocity
+                        pi.velocityX += gravity.x;
+                        pi.velocityY += gravity.y;
 
                         // Clamp to maxSpeed
                         const speed = Math.sqrt(pi.velocityX * pi.velocityX + pi.velocityY * pi.velocityY);
