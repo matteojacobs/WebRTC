@@ -30,16 +30,12 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     delete clients[socket.id];
     console.log("Socket disconnected", socket.id);
-    // broadcast when somebody disconnects
-    io.emit("clients", clients);
   });
 
   socket.on('signal', (peerId, signal) => {
     io.to(peerId).emit('signal', peerId, signal, socket.id);
   });
 
-  //broadcast client list
-  io.emit("clients", clients);
 });
 
 app.use(express.static("public"));

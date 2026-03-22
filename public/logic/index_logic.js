@@ -104,18 +104,11 @@ const initParticleLife = () => {
     let width  = 0;
     let height = 0;
 
-    const resize = () => {
-        width  = canvas.width  = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-    };
-
-    window.addEventListener('resize', resize);
-    resize();
-
+    
     const particleAmount = 1000;
     let particleRadius = 3;
 
-    const maxDistance   = Math.min(width, height) * 0.1;
+    let maxDistance   = Math.min(width, height) * 0.1;
     const repulsionZone = 0.3;
 
     const deltaT      = 0.05;
@@ -139,6 +132,16 @@ const initParticleLife = () => {
         lime:    '#aaff00',
         white:   '#ffffff',
     };
+
+    const resize = () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      maxDistance = Math.min(width, height) * 0.1;
+    };
+
+    window.addEventListener("resize", resize);
+    resize();
+
 
     const colorKeys = Object.keys(colors);
 
@@ -317,13 +320,9 @@ const initParticleLife = () => {
         drawParticles();
     };
 
-    let paused = false;
-
-    const loop = () => {
-        if (!paused) {
-            updateParticles();
-            draw();
-        }
+    const loop = () => { 
+        updateParticles();
+        draw();
         requestAnimationFrame(loop);
     };
 

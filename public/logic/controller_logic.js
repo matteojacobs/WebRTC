@@ -3,7 +3,7 @@ let socket;
 let peer;
 let permissionResults;
 let originalPermissions;
-let sensorInformation;
+let sensorInformation = null;
 
 const sensorState = {
     vertical: 'N/A',
@@ -117,7 +117,7 @@ const init = () => {
 
     document.getElementById('btn-shuffle').addEventListener('click', () => {
         if (peer && peer.connected) {
-            peer.send(JSON.stringify({ command: 'shuffleMatrix' }));
+            peer.send(JSON.stringify({ action: 'shuffleMatrix' }));
         }
         const btn = document.getElementById('btn-shuffle');
         btn.classList.add('spinning');
