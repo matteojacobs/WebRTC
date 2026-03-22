@@ -75,14 +75,21 @@ const initSocket = async () => {
                 if (parsed.action === 'shuffleMatrix') {
                     makeRandomMatrix();
                     return;
-                }
-
-                else {
-                    phoneData = parsed
+                } else {
+                    phoneData = parsed;
                     dismissOverlay();
                 }
+            });
 
-                
+            peer.on('close', () => {
+                // Mark as destroyed so the next incoming signal creates a fresh peer
+                peer.destroyed = true;
+                phoneData = null;
+            });
+
+            peer.on('error', () => {
+                if (!peer.destroyed) peer.destroy();
+                phoneData = null;
             });
         }
 
@@ -324,4 +331,3 @@ const initParticleLife = () => {
 };
 
 init();
-

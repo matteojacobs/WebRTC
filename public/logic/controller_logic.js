@@ -117,7 +117,7 @@ const init = () => {
 
     document.getElementById('btn-shuffle').addEventListener('click', () => {
         if (peer && peer.connected) {
-            peer.send(JSON.stringify({ command: 'shuffle' }));
+            peer.send(JSON.stringify({ command: 'shuffleMatrix' }));
         }
         const btn = document.getElementById('btn-shuffle');
         btn.classList.add('spinning');
@@ -269,10 +269,6 @@ const requestWakeLock = async () => {
 requestWakeLock();
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') requestWakeLock();
-});
-
-document.getElementById('btn-shuffle').addEventListener('click', () => {
-    peer.send(JSON.stringify({ action: 'shuffleMatrix' }));
 });
 
 // ── Socket / peer ─────────────────────────────────────
