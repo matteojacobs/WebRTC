@@ -1,3 +1,62 @@
+# Magic Wand — Particle Life Simulation
+
+> Use your phone as a magic wand to control a living particle simulation on a desktop screen.
+
+## What Is This?
+
+Magic Wand is an interactive experience that connects a smartphone to a desktop browser over a local network. The desktop displays a **Particle Life simulation** — hundreds of coloured particles that attract and repel each other according to a hidden ruleset, producing emergent, organism-like behaviour. The phone acts as a physical controller ("wand") that bends those rules in real time using its built-in sensors.
+
+Point the phone like a compass and the particles fall in that direction. Shake it and they scatter. Speak near it and they explode outward. The simulation reacts to where you are, how you move, and how loud your environment is.
+
+### How It Works
+
+1. Open the desktop page — a QR code appears on screen
+2. Scan the QR code with your phone — it opens the controller page in your mobile browser
+3. Tap **Grant Permissions** on your phone to allow sensor access
+4. The QR card disappears and the simulation begins responding to your phone
+
+The connection is peer-to-peer (WebRTC data channel). The server is only used to broker the initial handshake — once connected, all sensor data flows directly from phone to desktop with no server in the loop.
+
+### Sensor Mapping
+
+| Sensor | Effect on simulation |
+|---|---|
+| Gyroscope (motion) | Shake intensity → max particle speed |
+| Accelerometer (tilt X) | Front/back tilt → particle radius (cubic curve) |
+| Microphone (bass energy) | Loud bass → shifts all attraction values toward repulsion |
+| Compass + tilt Y | Heading → gravity direction · tilt angle → gravity strength |
+| Battery | Charge level → number of active colour groups (1–10) |
+
+Each sensor can be individually muted from the phone controller panel without refreshing the page.
+
+## Setup & Running
+
+**Requirements:** Node.js, a phone and desktop on the same local network, and a self-signed SSL certificate (required for mobile sensor permissions over HTTPS).
+
+```bash
+# Generate a self-signed certificate (run once)
+openssl req -x509 -newkey rsa:2048 -keyout localhost.key -out localhost.crt -days 365 -nodes
+
+# Install dependencies
+npm install
+
+# Start the server
+npm start
+```
+
+The terminal will print the full local URL (e.g. `https://192.168.x.x:443`). Open that on your desktop. Your browser will warn about the self-signed certificate — click through to proceed.
+
+## Tech Stack
+
+- **Node.js + Express** — local HTTPS server, static file hosting
+- **Socket.IO** — signalling layer (WebSocket, server-side only)
+- **SimplePeer** — WebRTC peer-to-peer data channel
+- **HTML5 Canvas** — particle rendering
+- **Web APIs** — `DeviceOrientationEvent`, `DeviceMotionEvent`, `AudioContext`, `navigator.getBattery`, `navigator.wakeLock`
+- **QRCode Generator** — `qrcode-generator` library for the pairing code
+
+---
+
 # Development Process
 
 ---
@@ -709,3 +768,81 @@ All JavaScript was extracted from both HTML files into `index_logic.js` and `con
 **AI involvement:** None. This was a structural decision I made to keep the HTML readable, Git diffs clean, and the logic independently editable.
 
 ---
+# Critical Reflection on AI Use
+
+## How I Used AI
+
+AI (Claude) was my primary coding collaborator throughout this project. I used it in two distinct modes: **generative** (asking it to produce new code) and **diagnostic** (asking it to explain problems and bugs). I never used AI as a one-shot solution — every interaction was a conversation, and I always read and understood the output before using it.
+
+My workflow was usually:
+1. Build a rough mental model of what I needed
+2. Ask AI to generate a starting point
+3. Read the output carefully — line by line for anything physics or async related
+4. Modify or rewrite the parts that didn't fit my understanding or requirements
+5. Test, observe unexpected behaviour, then either fix it myself or bring a precise question back to AI
+
+---
+
+## What AI Generated
+
+AI produced large portions of the codebase, including:
+- The particle simulation scaffolding (canvas setup, game loop, `requestAnimationFrame`, initial `rule()` force function, attraction matrix, toroidal wrap logic)
+- The WebRTC/SimplePeer socket and peer connection structure
+- The phone controller UI (panel layout, permission badge system, toggle pill CSS, compass SVG markup, all sensor bar CSS)
+- The `dataCollection` interval and `microphoneData()` FFT function
+- The `compassMap` lookup table and initial gravity direction logic
+- The `setBar`, `setTiltBar`, `updateCompass` JS helpers and the `startUILoop` interval
+- The QR card layout, `cardIn` animation, shimmer placeholder, and overlay transition CSS
+- The CSS variable system and Cinzel + Raleway typography pairing
+
+---
+
+## What I Modified or Wrote Myself (🟢 Code Green)
+
+The development diary entries above each include an explicit **My modifications** section. Summarised across the project:
+
+**Architecture decisions I made without AI:**
+- Reversing the WebRTC initiation direction (phone initiates, not desktop) after diagnosing a timing issue — AI didn't suggest this; I identified the root cause and restructured both files myself
+- Separating `baseMatrix` from `attractionMatrix` so microphone bass shifts are always relative to the original random state and don't compound permanently
+- The two-state QR card system (`#state-scan` / `#state-connected`) and tying overlay dismissal to the first real sensor packet rather than the connect event
+- Removing the `sensorEnabled` / `effectivePerms` double-source-of-truth and replacing it with direct `permissionResults` mutation
+- The shuffle feature (`btn-shuffle` → `shuffleMatrix` action over the data channel) — written entirely by me once I understood the send/receive pattern
+- Moving matrix variables to module scope so the data handler could reach them
+- Extracting all JS into separate files (`index_logic.js`, `controller_logic.js`)
+
+**Physics and parameter tuning I did myself:**
+- Rewriting the force function to a two-zone model (repulsion zone + triangular attraction peak) based on the reference implementations
+- The cubic exponent on `tiltX` for particle radius (`Math.pow(tiltX, 3)` vs AI's linear mapping)
+- The `tiltStrength` multiplier on gravity (`Math.abs(tiltY) / 90`) so gravity feels feathered rather than binary
+- The battery→colour groups mapping formula (`Math.ceil(battery / 10)`)
+- Choosing to rebuild the full attraction matrix on colour group count change rather than patching it
+
+**Visual decisions I made myself:**
+- Adding Share Tech Mono as a third typeface for sensor readout labels (AI's two-font system felt too uniform)
+- Changing `.panel-muted` to 28% opacity instead of fully hiding the panel body (AI hid it entirely; I wanted the bars to stay faintly visible)
+- Changing Tilt Y to a plain magnitude bar after realising the simulation uses `Math.abs(tiltY)`
+
+---
+
+## What I Learned From AI (vs. What I Already Knew)
+
+**Things AI taught me:**
+- The exact failure mode for Promise + `{once: true}` + iOS event throttling (the frozen sensor bug) — I had diagnosed the pattern as wrong but AI explained *why* it freezes specifically on iOS and flagged the battery memory leak I'd missed
+- The `createDataChannel('init')` trick to force WebRTC data channel negotiation before any data is sent
+- How `AudioContext.createAnalyser()` and `getByteFrequencyData()` work for real-time frequency analysis
+
+**Things I understood before AI generated the code:**
+- The overall WebRTC/SimplePeer handshake flow (from the course demos)
+- Why sensors need persistent push-based listeners instead of polling (I identified the architectural problem before asking AI to explain it)
+- The particle life concept and why emergent behaviour arises from pairwise attraction rules
+- How `permissionResults` should work — I saw AI's double-source approach immediately felt wrong
+
+---
+
+## Honest Assessment
+
+AI accelerated the project significantly. Without it, the sensor dashboard UI, the compass SVG, and the microphone FFT pipeline would each have taken much longer to produce. AI is very good at generating boilerplate, layout code, and standard patterns.
+
+Where AI was less useful — and where I had to be more careful — was anywhere the code needed to fit a *specific* architectural constraint I had in mind that AI didn't know about. AI generates sensible standalone code, but it doesn't know that your `peer.on('data')` handler sits outside your simulation function, or that your toggle state needs to live in one object not two. Those integration decisions were always mine to make.
+
+The biggest risk I noticed was accepting AI output too quickly. Several bugs in the project came directly from AI-generated code I hadn't scrutinised carefully enough (the frozen sensor pattern, the battery listener leak, the double-source toggle). The fix in each case required understanding the code deeply enough to see why it was wrong — which is exactly why reading and modifying the output matters more than generating it.
